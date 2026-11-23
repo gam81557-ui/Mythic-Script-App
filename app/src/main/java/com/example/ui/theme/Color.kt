@@ -1,0 +1,70 @@
+package com.example.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Fallback Material 3 Light Palette (Cobalt Slate & Tactical Amber)
+val PrimaryLight = Color(0xFF1558B0)
+val OnPrimaryLight = Color(0xFFFFFFFF)
+val PrimaryContainerLight = Color(0xFFD6E3FF)
+val OnPrimaryContainerLight = Color(0xFF001B3E)
+
+val SecondaryLight = Color(0xFF475E7B)
+val OnSecondaryLight = Color(0xFFFFFFFF)
+val SecondaryContainerLight = Color(0xFFCCE2FF)
+val OnSecondaryContainerLight = Color(0xFF001D36)
+
+val TertiaryLight = Color(0xFF8C5A00)
+val OnTertiaryLight = Color(0xFFFFFFFF)
+val TertiaryContainerLight = Color(0xFFFFDEAC)
+val OnTertiaryContainerLight = Color(0xFF2D1A00)
+
+val BackgroundLight = Color(0xFFF7F9FC)
+val OnBackgroundLight = Color(0xFF181C22)
+val SurfaceLight = Color(0xFFF7F9FC)
+val OnSurfaceLight = Color(0xFF181C22)
+val SurfaceVariantLight = Color(0xFFE0E6F0)
+val OnSurfaceVariantLight = Color(0xFF434954)
+val OutlineLight = Color(0xFF737985)
+val OutlineVariantLight = Color(0xFFC3C9D4)
+val ErrorLight = Color(0xFFBA1A1A)
+val OnErrorLight = Color(0xFFFFFFFF)
+val ErrorContainerLight = Color(0xFFFFDAD6)
+val OnErrorContainerLight = Color(0xFF410002)
+
+// Fallback Material 3 Dark Palette (Deep Arena Slate & Luminous Cyan/Amber)
+val PrimaryDark = Color(0xFFA9C7FF)
+val OnPrimaryDark = Color(0xFF002F65)
+val PrimaryContainerDark = Color(0xFF00458E)
+val OnPrimaryContainerDark = Color(0xFFD6E3FF)
+
+val SecondaryDark = Color(0xFFB0C8E8)
+val OnSecondaryDark = Color(0xFF18324B)
+val SecondaryContainerDark = Color(0xFF304863)
+val OnSecondaryContainerDark = Color(0xFFCCE2FF)
+
+val TertiaryDark = Color(0xFFFFBA49)
+val OnTertiaryDark = Color(0xFF492900)
+val TertiaryContainerDark = Color(0xFF693E00)
+val OnTertiaryContainerDark = Color(0xFFFFDEAC)
+
+val BackgroundDark = Color(0xFF0F141C)
+val OnBackgroundDark = Color(0xFFE2E6EE)
+val SurfaceDark = Color(0xFF121822)
+val OnSurfaceDark = Color(0xFFE2E6EE)
+val SurfaceVariantDark = Color(0xFF27303E)
+val OnSurfaceVariantDark = Color(0xFFC2C8D4)
+val OutlineDark = Color(0xFF8C929E)
+val OutlineVariantDark = Color(0xFF3B4453)
+val ErrorDark = Color(0xFFFFB4AB)
+val OnErrorDark = Color(0xFF690005)
+val ErrorContainerDark = Color(0xFF93000A)
+val OnErrorContainerDark = Color(0xFFFFDAD6)
+
+// Semantic Status Accents
+val StatusActiveGreen = Color(0xFF16A34A)
+val StatusActiveGreenContainerDark = Color(0xFF0F3A22)
+val StatusActiveGreenContainerLight = Color(0xFFDCFCE7)
+val StatusWarningAmber = Color(0xFFD97706)
+val StatusWarningAmberContainerDark = Color(0xFF422706)
+val StatusWarningAmberContainerLight = Color(0xFFFEF3C7)
+val StatusInfoCyan = Color(0xFF0284C7)

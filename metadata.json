@@ -1,0 +1,6 @@
+{
+  "name": "Mythic Script",
+  "description": "MLBB Hero Companion, Skin Script Manager, and Shizuku-based Asset Injector & Restorer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

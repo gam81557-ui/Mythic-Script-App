@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Mythic Script</string>
+    <string name="companion_subtitle">Hero Companion &amp; Shizuku Script Deck</string>
+    <string name="search_heroes_hint">Search Hero</string>
+    <string name="tab_skin_scripts">Skin Scripts</string>
+    <string name="tab_stats_combos">Stats &amp; Combos</string>
+    <string name="disclaimer_title">Unofficial Script &amp; Integrity Notice</string>
+    <string name="disclaimer_body">Unofficial skin scripts modify local asset files under /Android/data/. Game integrity checks or anti-tamper updates may revert files or carry account ban risks. Always keep original backups before injecting.</string>
+    <string name="action_inject_selected">Inject Selected</string>
+    <string name="action_reinject">Re-Inject</string>
+    <string name="action_restore_original">Restore Original</string>
+    <string name="action_clear_backup">Clear Backup</string>
+    <string name="action_import_zip">Import .zip</string>
+    <string name="action_download_skin">Download</string>
+    <string name="shizuku_setup_title">Shizuku Privileged Bridge</string>
+    <string name="cd_back_to_heroes">Back to hero roster</string>
+    <string name="cd_settings_diagnostics">Target package and Shizuku diagnostics</string>
+    <string name="cd_companion_banner">Tactical arena companion banner</string>
+    <string name="unavailable_skin_message">This skin is currently unavailable. Please try another skin.</string>
+</resources>
