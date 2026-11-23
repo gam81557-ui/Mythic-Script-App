@@ -470,8 +470,8 @@ class ScriptArchiveManager(private val context: Context) {
          */
         fun normalizeMlbbRelativePath(sanitizedRel: String): String {
             return when {
-                sanitizedRel.startsWith("files/") -> sanitizedRel
-                sanitizedRel.startsWith("dragon2017/") -> "files/$sanitizedRel"
+                sanitizedRel.contains("files/") -> sanitizedRel.substring(sanitizedRel.indexOf("files/"))
+                sanitizedRel.contains("dragon2017/") -> "files/" + sanitizedRel.substring(sanitizedRel.indexOf("dragon2017/"))
                 sanitizedRel.startsWith("assets/") -> "files/dragon2017/$sanitizedRel"
                 else -> "files/dragon2017/assets/Art/Android/$sanitizedRel"
             }

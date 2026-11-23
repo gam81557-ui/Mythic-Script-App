@@ -321,7 +321,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
         val allMappedScripts = (persistedMappedScripts + remoteMappedScripts)
             .sortedWith(
-                compareBy<SkinScriptItem> { script ->
+                compareBy<SkinScriptItem> { it.skinName.contains("default", true) || it.skinName.contains("backup", true) }.thenBy { script ->
                     when {
                         script.lifecycleState is ScriptLifecycleState.Injected -> 0
                         script.lifecycleState is ScriptLifecycleState.Downloaded || script.isDownloaded -> 1
