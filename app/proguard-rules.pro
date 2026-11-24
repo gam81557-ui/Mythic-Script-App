@@ -22,9 +22,8 @@
 
 -keep class com.startapp.** { *; }
 -dontwarn com.startapp.**
-
 -keepattributes *Serializable*
--dontwarn **\l-keep class com.example.** { *; }
+-dontwarn **
+-keep class com.example.** { *; }
 -keep class **KotlinxSerializer* {for *;}
--dontwarn org.android.**
 -keepclassmembers class * { @open *SignalProcessing* *; }
