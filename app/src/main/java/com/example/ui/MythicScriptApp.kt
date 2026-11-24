@@ -48,7 +48,7 @@ fun MythicScriptApp(
     // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
     DisposableEffect(viewModel, appContext) {
         val gate: (() -> Unit) -> Boolean = { onProceed ->
-            StartIoAdManager.showRewardedThenDownload(appContext) { onProceed() }
+            UnityAdManager.showRewardedThenDownload(appContext) { onProceed() }
         }
         viewModel.adGate = gate
         onDispose {
