@@ -42,27 +42,6 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
             tools:replace="android:authorities" />
-        <meta-data android:name="com.startapp.sdk.APPLICATION_ID" android:value="210526324" />
-
-        <!-- Start.io full-screen ad activities. OverlayActivity and List3DActivity are also
-             declared by the SDK AAR; declaring them explicitly keeps them in the merged
-             manifest. FullScreenActivity is kept for compatibility with older Start.io SDK
-             releases, which still launch it for full-page interstitials. -->
-        <activity
-            android:name="com.startapp.sdk.ads.interstitials.OverlayActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="false"
-            android:theme="@android:style/Theme.Translucent" />
-        <activity
-            android:name="com.startapp.sdk.adsbase.activities.FullScreenActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:exported="false"
-            android:theme="@android:style/Theme.Translucent"
-            tools:ignore="MissingClass" />
-        <activity
-            android:name="com.startapp.sdk.ads.list3d.List3DActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme" />
 </application>
 
 </manifest>

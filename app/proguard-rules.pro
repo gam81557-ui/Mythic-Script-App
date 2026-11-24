@@ -1,15 +1,8 @@
 # Project-specific R8/ProGuard rules.
 
-# Start.io SDK: ads, listeners and activities are instantiated reflectively, so the whole
-# package has to survive shrinking and obfuscation in release builds.
--keep class com.startapp.** { *; }
--keep interface com.startapp.** { *; }
--keepclassmembers class com.startapp.** { *; }
--keep class * extends com.startapp.sdk.adsbase.Ad { *; }
--keep class * implements com.startapp.sdk.adsbase.adlisteners.AdEventListener { *; }
--keep class * implements com.startapp.sdk.adsbase.adlisteners.AdDisplayListener { *; }
--keep class * implements com.startapp.sdk.ads.banner.BannerListener { *; }
--dontwarn com.startapp.**
+# Unity Ads ships its own consumer ProGuard rules inside the AAR (proguard.txt), including
+# keeps for com.unity3d.ads.**, com.unity3d.services.**, and the WebView JavaScript bridge.
+-dontwarn com.unity3d.**
 
 # Attributes required by the SDK (serialization, annotations, WebView JS bridges).
 -keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod

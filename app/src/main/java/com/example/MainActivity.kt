@@ -1,6 +1,11 @@
 package com.example
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
+import android.util.Log
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
@@ -19,9 +24,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -29,12 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.CompanionViewModel
 import com.example.ui.MythicScriptApp
-import com.example.ui.StartIoAdManager
+import com.example.ui.UnityAdManager
 import com.example.ui.theme.MythicScriptTheme
-import com.startapp.sdk.ads.banner.Banner
+import com.unity3d.services.banners.BannerErrorInfo
+import com.unity3d.services.banners.BannerView
+import com.unity3d.services.banners.UnityBannerSize
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -42,8 +52,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        StartIoAdManager.init(this)
-        StartIoAdManager.preload(this)
+        UnityAdManager.init(this)
+        UnityAdManager.preload(this)
 
         setContent {
             val viewModel: CompanionViewModel = viewModel()
@@ -53,7 +63,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(retryCount) {
                 status = STATUS_CHECKING
                 delay(800)
-                status = if (StartIoAdManager.isOnline(this@MainActivity)) {
+                status = if (UnityAdManager.isOnline(this@MainActivity)) {
                     STATUS_ONLINE
                 } else {
                     STATUS_OFFLINE
@@ -78,7 +88,7 @@ class MainActivity : ComponentActivity() {
                         Box(modifier = Modifier.weight(1f)) {
                             MythicScriptApp(viewModel = viewModel)
                         }
-                        StartIoBanner()
+                        UnityBanner()
                     }
                 }
             }
@@ -86,7 +96,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        StartIoAdManager.release()
+        UnityAdManager.release()
         super.onDestroy()
     }
 
@@ -112,7 +122,17 @@ private fun StatusScreen(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun StartIoBanner() {
+private fun UnityBanner() {
+    val initialized by UnityAdManager.isInitialized.collectAsStateWithLifecycle()
+    var bannerView by remember { mutableStateOf<BannerView?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            bannerView?.destroy()
+            bannerView = null
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -120,22 +140,75 @@ private fun StartIoBanner() {
             .navigationBarsPadding(),
         contentAlignment = Alignment.Center,
     ) {
-        AndroidView(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(BannerHeight),
-            factory = { context ->
-                FrameLayout(context).apply {
-                    addView(
-                        Banner(context).apply {
-                            layoutParams = FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
+        if (initialized) {
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(BannerHeight),
+                factory = { context ->
+                    val activity = context.findActivity()
+                    if (activity == null) {
+                        FrameLayout(context)
+                    } else {
+                        FrameLayout(context).apply {
+                            val banner = BannerView(
+                                activity,
+                                UnityAdManager.BANNER_PLACEMENT,
+                                UnityBannerSize(320, 50),
+                            ).apply {
+                                setListener(object : BannerView.IListener {
+                                    override fun onBannerLoaded(banner: BannerView) {
+                                        Log.d(BANNER_TAG, "Banner loaded")
+                                    }
+
+                                    override fun onBannerShown(banner: BannerView) = Unit
+
+                                    override fun onBannerClick(banner: BannerView) = Unit
+
+                                    override fun onBannerFailedToLoad(
+                                        banner: BannerView,
+                                        errorInfo: BannerErrorInfo,
+                                    ) {
+                                        Log.w(
+                                            BANNER_TAG,
+                                            "Banner failed: ${errorInfo.errorCode} ${errorInfo.errorMessage}",
+                                        )
+                                    }
+
+                                    override fun onBannerLeftApplication(banner: BannerView) = Unit
+                                })
+                                load()
+                            }
+                            addView(
+                                banner,
+                                FrameLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    Gravity.CENTER,
+                                ),
                             )
-                        },
-                    )
-                }
-            },
-        )
+                            bannerView = banner
+                        }
+                    }
+                },
+            )
+        } else {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(BannerHeight),
+            )
+        }
     }
+}
+
+private const val BANNER_TAG = "UnityBanner"
+
+private fun Context.findActivity(): Activity? {
+    var context: Context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
