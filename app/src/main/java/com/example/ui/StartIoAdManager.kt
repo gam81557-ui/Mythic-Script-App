@@ -7,7 +7,6 @@ import android.content.*
 import android.net.*
 import android.os.*
 import com.startapp.sdk.adsbase.*
-import com.startapp.sdk.adsbase.addisplays.*
 object StartIoAdManager {
 fun isOnline(c: Context): Boolean { val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager; val n = cm.activeNetwork ?: return false; return cm.getNetworkCapabilities(n)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true }
 fun findAct(c: Context): Activity? { var x = c; while (x is ContextWrapper) { if (x is Activity) return x; x = x.baseContext }; return null }
