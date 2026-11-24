@@ -238,4 +238,35 @@ class RemoteConfigManagerTest {
         assertTrue(manager.parseConfigJson("{bad json").isFailure)
         assertTrue(manager.parseConfigJson("\"just a string\"").isFailure)
     }
+
+    @Test
+    fun `requireAdForDownload defaults to true when flag is absent`() {
+        val raw = """
+            {
+              "enabled": true,
+              "Hayabusa-XYZ999": { "hero": "Hayabusa", "skin_name": "Shadow" }
+            }
+        """.trimIndent()
+
+        val cfg = manager.parseConfigJson(raw).getOrThrow()
+        assertTrue(cfg.requireAdForDownload)
+    }
+
+    @Test
+    fun `requireAdForDownload reads root and feature flag values`() {
+        val rootFlag = manager.parseConfigJson(
+            """{ "requireAdForDownload": false, "Hayabusa-XYZ999": { "hero": "Hayabusa", "skin_name": "Shadow" } }"""
+        ).getOrThrow()
+        assertFalse(rootFlag.requireAdForDownload)
+
+        val nestedFlag = manager.parseConfigJson(
+            """{ "featureFlags": { "requireAdForDownload": false }, "Hayabusa-XYZ999": { "hero": "Hayabusa", "skin_name": "Shadow" } }"""
+        ).getOrThrow()
+        assertFalse(nestedFlag.requireAdForDownload)
+
+        val arrayRoot = manager.parseConfigJson(
+            """[ { "requireAdForDownload": false }, { "hero": "Ling", "skin_name": "Serene Plume" } ]"""
+        ).getOrThrow()
+        assertFalse(arrayRoot.requireAdForDownload)
+    }
 }

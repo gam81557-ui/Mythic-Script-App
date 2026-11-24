@@ -1,32 +1,21 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Project-specific R8/ProGuard rules.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
+# Start.io SDK: ads, listeners and activities are instantiated reflectively, so the whole
+# package has to survive shrinking and obfuscation in release builds.
 -keep class com.startapp.** { *; }
--dontwarn com.startapp.**
--keepattributes *Serializable*
--dontwarn **
--keep class com.example.** { *; }
--keep class **KotlinxSerializer* {for *;}
--keepclassmembers class * { @open *SignalProcessing* *; }
-
 -keep interface com.startapp.** { *; }
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepclassmembers class com.startapp.** { *; }
+-keep class * extends com.startapp.sdk.adsbase.Ad { *; }
+-keep class * implements com.startapp.sdk.adsbase.adlisteners.AdEventListener { *; }
+-keep class * implements com.startapp.sdk.adsbase.adlisteners.AdDisplayListener { *; }
+-keep class * implements com.startapp.sdk.ads.banner.BannerListener { *; }
+-dontwarn com.startapp.**
+
+# Attributes required by the SDK (serialization, annotations, WebView JS bridges).
+-keepattributes Exceptions,InnerClasses,Signature,Deprecated,SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# App classes accessed through reflection (Room/KSP generated code, JSON models).
+-keep class com.example.** { *; }

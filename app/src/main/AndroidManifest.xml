@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
@@ -42,7 +43,26 @@
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
             tools:replace="android:authorities" />
         <meta-data android:name="com.startapp.sdk.APPLICATION_ID" android:value="210526324" />
-    <activity android:name="com.startapp.sdk.ads.interstitials.OverlayActivity" android:theme="@android:style/Theme.Translucent" />
+
+        <!-- Start.io full-screen ad activities. OverlayActivity and List3DActivity are also
+             declared by the SDK AAR; declaring them explicitly keeps them in the merged
+             manifest. FullScreenActivity is kept for compatibility with older Start.io SDK
+             releases, which still launch it for full-page interstitials. -->
+        <activity
+            android:name="com.startapp.sdk.ads.interstitials.OverlayActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent" />
+        <activity
+            android:name="com.startapp.sdk.adsbase.activities.FullScreenActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent"
+            tools:ignore="MissingClass" />
+        <activity
+            android:name="com.startapp.sdk.ads.list3d.List3DActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme" />
 </application>
 
 </manifest>

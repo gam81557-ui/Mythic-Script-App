@@ -39,6 +39,8 @@ data class RemoteConfig(
     val fetchedAtMillis: Long,
     val heroPortraits: Map<String, String> = emptyMap(),
     val heroFallbackPortraits: Map<String, String> = emptyMap(),
+    /** When true (the default) a rewarded/interstitial ad must be watched before a skin download. */
+    val requireAdForDownload: Boolean = true,
 ) {
     val canInjectRemotely: Boolean
         get() = !maintenanceMode && injectionEnabled

@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.remote.RemoteConfigState
+import com.example.domain.model.SkinScriptItem
 import com.example.ui.components.CompanionTopAppBar
 import com.example.ui.components.ConfirmClearBackupDialog
 import com.example.ui.components.DisclaimerDetailsDialog
@@ -41,7 +43,19 @@ fun MythicScriptApp(
     viewModel: CompanionViewModel,
 ) {
     val adCtx = LocalContext.current
-val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val requireAdForDownload = when (val remoteState = uiState.remoteConfigState) {
+        is RemoteConfigState.Ready -> remoteState.config.requireAdForDownload
+        is RemoteConfigState.Failed -> remoteState.lastKnownConfig?.requireAdForDownload ?: true
+        RemoteConfigState.Loading -> true
+    }
+    val requestDownload: (SkinScriptItem) -> Unit = { script ->
+        if (requireAdForDownload) {
+            StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(script) }
+        } else {
+            viewModel.downloadSkinScript(script)
+        }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     var isShowingCompactDetail by rememberSaveable { mutableStateOf(false) }
     var showClearBackupConfirm by remember { mutableStateOf(false) }
@@ -129,7 +143,7 @@ val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = { s -> StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(s) } },
+                            onDownloadScript = requestDownload,
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
@@ -167,7 +181,7 @@ val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = { s -> StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(s) } },
+                            onDownloadScript = requestDownload,
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
