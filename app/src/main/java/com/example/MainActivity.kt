@@ -18,7 +18,7 @@ import com.startapp.sdk.ads.banner.Banner
 import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
 override fun onCreate(savedInstanceState: Bundle?) {
-super.onCreate(savedInstanceState); enableEdgeToEdge(); StartAppSDK.init(this, "210526324", false); StartAppAd.disableSplash(); StartAppSDK.setTestAdsEnabled(true); setContent {
+super.onCreate(savedInstanceState); enableEdgeToEdge(); StartAppSDK.init(this, "210526324", false); StartAppAd.disableSplash(); setContent {
 val vm: CompanionViewModel = viewModel(); var st by remember { mutableStateOf(0) }; var tc by remember { mutableStateOf(0) }; LaunchedEffect(tc) { st = 0; delay(800); st = if (StartIoAdManager.isOnline(this@MainActivity)) 1 else 2 };
 when (st) {
 0 -> Box(Modifier.fillMaxSize().background(Color(0xFF0F0F14)), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(color = Color(0xFF3B82F6)); Spacer(Modifier.height(16.dp)); Text("Checking Connection...", color = Color.White) } }
