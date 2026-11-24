@@ -24,6 +24,10 @@ object StartIoAdManager {
     private const val TAG = "StartIoAdManager"
     private const val LOAD_TIMEOUT_MS = 12_000L
 
+    // Start.io test ads show instantly with the "Test Ad" label and must be turned off
+    // before publishing to production.
+    private const val TEST_ADS_ENABLED = true
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var activityRef: WeakReference<Activity>? = null
     private var interstitial: StartAppAd? = null
@@ -35,6 +39,7 @@ object StartIoAdManager {
 
     fun init(activity: Activity) {
         activityRef = WeakReference(activity)
+        StartAppSDK.setTestAdsEnabled(TEST_ADS_ENABLED)
         StartAppSDK.init(activity.applicationContext, APP_ID)
     }
 
