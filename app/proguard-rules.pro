@@ -27,3 +27,6 @@
 -keep class com.example.** { *; }
 -keep class **KotlinxSerializer* {for *;}
 -keepclassmembers class * { @open *SignalProcessing* *; }
+
+-keep interface com.startapp.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
