@@ -1,5 +1,4 @@
 package com.example.ui
-import androidx.compose.platform.LocalContext
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
