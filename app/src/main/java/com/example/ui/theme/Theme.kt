@@ -1,130 +1,36 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryDark,
-    onPrimary = OnPrimaryDark,
-    primaryContainer = PrimaryContainerDark,
-    onPrimaryContainer = OnPrimaryContainerDark,
-    secondary = SecondaryDark,
-    onSecondary = OnSecondaryDark,
-    secondaryContainer = SecondaryContainerDark,
-    onSecondaryContainer = OnSecondaryContainerDark,
-    tertiary = TertiaryDark,
-    onTertiary = OnTertiaryDark,
-    tertiaryContainer = TertiaryContainerDark,
-    onTertiaryContainer = OnTertiaryContainerDark,
-    background = BackgroundDark,
-    onBackground = OnBackgroundDark,
-    surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
-    outline = OutlineDark,
-    outlineVariant = OutlineVariantDark,
-    error = ErrorDark,
-    onError = OnErrorDark,
-    errorContainer = ErrorContainerDark,
-    onErrorContainer = OnErrorContainerDark,
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryLight,
-    onPrimary = OnPrimaryLight,
-    primaryContainer = PrimaryContainerLight,
-    onPrimaryContainer = OnPrimaryContainerLight,
-    secondary = SecondaryLight,
-    onSecondary = OnSecondaryLight,
-    secondaryContainer = SecondaryContainerLight,
-    onSecondaryContainer = OnSecondaryContainerLight,
-    tertiary = TertiaryLight,
-    onTertiary = OnTertiaryLight,
-    tertiaryContainer = TertiaryContainerLight,
-    onTertiaryContainer = OnTertiaryContainerLight,
-    background = BackgroundLight,
-    onBackground = OnBackgroundLight,
-    surface = SurfaceLight,
-    onSurface = OnSurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = OnSurfaceVariantLight,
-    outline = OutlineLight,
-    outlineVariant = OutlineVariantLight,
-    error = ErrorLight,
-    onError = OnErrorLight,
-    errorContainer = ErrorContainerLight,
-    onErrorContainer = OnErrorContainerLight,
-)
-
-@Immutable
-data class SemanticStatusColors(
-    val active: Color,
-    val activeContainer: Color,
-    val warning: Color,
-    val warningContainer: Color,
-    val info: Color,
-)
-
-val LocalSemanticColors = staticCompositionLocalOf {
-    SemanticStatusColors(
-        active = StatusActiveGreen,
-        activeContainer = StatusActiveGreenContainerLight,
-        warning = StatusWarningAmber,
-        warningContainer = StatusWarningAmberContainerLight,
-        info = StatusInfoCyan,
-    )
-}
+private val MythicDarkScheme = darkColorScheme(
+    primary = Color(0xFFF0B90B),
+    onPrimary = Color(0xFF0A0E17),
+    primaryContainer = Color(0xFF2A2111),
+    onPrimaryContainer = Color(0xFFFDD2A),
+    secondary = Color(0xFF00E5FF),
+    onSecondary = Color(0xFF071318),
+    secondaryContainer = Color(0xFF0E3142),
+    onSecondaryContainer = Color(0xFFC1F6FF),
+    background = Color(0xFF0B0F19),
+    onBackground = Color(0xFFF2F6FC),
+    surface = Color(0xFF131929),
+    onSurface = Color(0xFFF2F6FC,
+    surfaceVariant = Color(0xFF1C2438),
+    onSurfaceVariant = Color(0xFFA0B0C8),
+    outline = Color(0xFF3A4666),
+    error = Color(0xFFFF5252))
 
 @Composable
 fun MythicScriptTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit,
+    darkTheme: Boolean = true,
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    val semanticColors = if (darkTheme) {
-        SemanticStatusColors(
-            active = Color(0xFF4ADE80),
-            activeContainer = StatusActiveGreenContainerDark,
-            warning = Color(0xFFFBBF24),
-            warningContainer = StatusWarningAmberContainerDark,
-            info = Color(0xFF38BDF8),
-        )
-    } else {
-        SemanticStatusColors(
-            active = StatusActiveGreen,
-            activeContainer = StatusActiveGreenContainerLight,
-            warning = StatusWarningAmber,
-            warningContainer = StatusWarningAmberContainerLight,
-            info = StatusInfoCyan,
-        )
-    }
-
-    CompositionLocalProvider(LocalSemanticColors provides semanticColors) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = Typography,
-            content = content,
-        )
-    }
+    MaterialTheme(
+        colorScheme = MythicDarkScheme,
+        content = content
+    )
 }
