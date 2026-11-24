@@ -14,7 +14,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.*
 import com.startapp.sdk.adsbase.*
-import com.startapp.sdk.adsbase.banner.Banner
+import com.startapp.sdk.ads.banner.Banner
 import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
 override fun onCreate(savedInstanceState: Bundle?) {

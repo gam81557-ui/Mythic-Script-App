@@ -1,4 +1,7 @@
 package com.example.ui
+
+import com.startapp.sdk.adsbase.adlisteners.AdEventListener
+import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
 import android.app.Activity
 import android.content.*
 import android.net.*
