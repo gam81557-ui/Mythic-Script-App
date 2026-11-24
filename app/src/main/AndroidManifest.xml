@@ -41,6 +41,7 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
             tools:replace="android:authorities" />
-    </application>
+        <meta-data android:name="com.startapp.sdk.APPLICATION_ID" android:value="210526324" />
+</application>
 
 </manifest>

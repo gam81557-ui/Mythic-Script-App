@@ -1,4 +1,5 @@
 package com.example.ui
+import androidx.compose.platform.LocalContext
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,7 +40,8 @@ import com.example.ui.components.RemoteMaintenanceBanner
 fun MythicScriptApp(
     viewModel: CompanionViewModel,
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val adCtx = LocalContext.current
+val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var isShowingCompactDetail by rememberSaveable { mutableStateOf(false) }
     var showClearBackupConfirm by remember { mutableStateOf(false) }
@@ -127,7 +129,7 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = viewModel::downloadSkinScript,
+                            onDownloadScript = { s -> StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(s) } },
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
@@ -165,7 +167,7 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = viewModel::downloadSkinScript,
+                            onDownloadScript = { s -> StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(s) } },
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
