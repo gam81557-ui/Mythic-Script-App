@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.data.remote.RemoteConfigState
-import com.example.domain.model.SkinScriptItem
 import com.example.ui.components.CompanionTopAppBar
 import com.example.ui.components.ConfirmClearBackupDialog
 import com.example.ui.components.DisclaimerDetailsDialog
@@ -42,18 +41,18 @@ import com.example.ui.components.RemoteMaintenanceBanner
 fun MythicScriptApp(
     viewModel: CompanionViewModel,
 ) {
-    val adCtx = LocalContext.current
+    val appContext = LocalContext.current.applicationContext
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val requireAdForDownload = when (val remoteState = uiState.remoteConfigState) {
-        is RemoteConfigState.Ready -> remoteState.config.requireAdForDownload
-        is RemoteConfigState.Failed -> remoteState.lastKnownConfig?.requireAdForDownload ?: true
-        RemoteConfigState.Loading -> true
-    }
-    val requestDownload: (SkinScriptItem) -> Unit = { script ->
-        if (requireAdForDownload) {
-            StartIoAdManager.showRewardedThenDownload(adCtx) { viewModel.downloadSkinScript(script) }
-        } else {
-            viewModel.downloadSkinScript(script)
+
+    // The ViewModel gates every download, including the auto-download behind Inject, so the
+    // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
+    DisposableEffect(viewModel, appContext) {
+        val gate: (() -> Unit) -> Boolean = { onProceed ->
+            StartIoAdManager.showRewardedThenDownload(appContext) { onProceed() }
+        }
+        viewModel.adGate = gate
+        onDispose {
+            if (viewModel.adGate === gate) viewModel.adGate = null
         }
     }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -143,7 +142,7 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = requestDownload,
+                            onDownloadScript = viewModel::downloadSkinScript,
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
@@ -181,7 +180,7 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = requestDownload,
+                            onDownloadScript = viewModel::downloadSkinScript,
                             onInjectScript = viewModel::injectScript,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
