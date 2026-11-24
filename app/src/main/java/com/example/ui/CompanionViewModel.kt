@@ -118,6 +118,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     @Volatile
     private var allowBackgroundRemoteSync: Boolean = true
 
+    /**
+     * Installed by the UI layer so every download, whether triggered directly or by injection,
+     * can be gated by the rewarded ad. Returns false when another ad flow is already running.
+     */
+    var adGate: ((onProceed: () -> Unit) -> Boolean)? = null
+
     private val roleFilterFlow = MutableStateFlow(HeroRole.ALL)
     private val searchQueryFlow = MutableStateFlow("")
     private val selectedHeroIdFlow = MutableStateFlow(HeroCatalogProvider.heroes.first().id)
@@ -484,6 +490,24 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         }
         if (script.lifecycleState.isBusy) return
 
+        maybeGateDownload { startDownload(script) }
+    }
+
+    private fun maybeGateDownload(onProceed: () -> Unit) {
+        val gate = adGate
+        if (requireAdForDownload() && gate != null) {
+            if (!gate(onProceed)) {
+                snackbarMessageFlow.value = "Please wait for the current ad to finish."
+            }
+        } else {
+            onProceed()
+        }
+    }
+
+    private fun requireAdForDownload(): Boolean =
+        currentRemoteConfig()?.requireAdForDownload ?: true
+
+    private fun startDownload(script: SkinScriptItem) {
         viewModelScope.launch {
             transientScriptStatesFlow.value =
                 transientScriptStatesFlow.value + (script.scriptId to ScriptLifecycleState.Downloading(0.10f))
@@ -542,6 +566,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     override fun onCleared() {
         super.onCleared()
+        adGate = null
         shizukuBridge.stopListening()
     }
 

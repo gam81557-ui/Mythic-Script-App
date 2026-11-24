@@ -138,6 +138,10 @@ class RemoteConfigManager(
         )
 
         val flags = extractFeatureFlags(root, nestedConfig)
+        val requireAdForDownload = resolveRequireAdForDownload(
+            sources = listOfNotNull(root, nestedConfig),
+            flags = flags,
+        )
 
         return RemoteConfig(
             maintenanceMode = maintenanceMode,
@@ -153,6 +157,7 @@ class RemoteConfigManager(
             fetchedAtMillis = fetchedAtMillis,
             heroPortraits = discoveredPortraits,
             heroFallbackPortraits = discoveredFallbackPortraits,
+            requireAdForDownload = requireAdForDownload,
         )
     }
 
@@ -221,6 +226,10 @@ class RemoteConfigManager(
             fetchedAtMillis = fetchedAtMillis,
             heroPortraits = discoveredPortraits,
             heroFallbackPortraits = discoveredFallbackPortraits,
+            requireAdForDownload = resolveRequireAdForDownload(
+                sources = emptyList(),
+                flags = featureFlags,
+            ),
         )
     }
 
@@ -398,6 +407,21 @@ class RemoteConfigManager(
                 .sortedWith(compareBy<RemoteSkinEntry> { it.sortOrder }.thenBy { it.name.lowercase() })
         }
         return sortedHeroes to sortedMap
+    }
+
+    private fun resolveRequireAdForDownload(
+        sources: List<JSONObject>,
+        flags: Map<String, Boolean>,
+    ): Boolean {
+        for (source in sources) {
+            if (hasAnyKey(source, REQUIRE_AD_KEYS)) {
+                return readBooleanAny(listOf(source), REQUIRE_AD_KEYS, true)
+            }
+        }
+        for (key in REQUIRE_AD_KEYS) {
+            flags[key]?.let { return it }
+        }
+        return true
     }
 
     private fun extractFeatureFlags(
@@ -588,6 +612,13 @@ class RemoteConfigManager(
             "inject_enabled",
             "enabled",
             "isActive",
+        )
+
+        private val REQUIRE_AD_KEYS = listOf(
+            "requireAdForDownload",
+            "require_ad_for_download",
+            "requireAd",
+            "require_ad",
         )
 
         private val HERO_PORTRAIT_REGEX = Regex("Hero\\d+1-portrait", RegexOption.IGNORE_CASE)
