@@ -21,7 +21,7 @@ override fun onCreate(savedInstanceState: Bundle?) {
 super.onCreate(savedInstanceState); enableEdgeToEdge(); StartAppSDK.init(this, "210526324", false); StartAppAd.disableSplash(); setContent {
 val vm: CompanionViewModel = viewModel(); var st by remember { mutableStateOf(0) }; var tc by remember { mutableStateOf(0) }; LaunchedEffect(tc) { st = 0; delay(800); st = if (StartIoAdManager.isOnline(this@MainActivity)) 1 else 2 };
 when (st) {
-0 -> Box(Modifier.fillMaxSize().background(Color(0xFF0F0F14)), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.Center) { CircularProgressIndicator(color = Color(0xFF3B82F6)); Spacer(Modifier.height(16.dp)); Text("Checking Connection...", color = Color.White) } }
-2 -> Box(Modifier.fillMaxSize().background(Color(0xFF0F0F14)), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.Center) { Text("No Internet Connection", color = Color.White); Spacer(Modifier.height(16.dp)); Button(onClick = { tc++ }) { Text("Retry") } } }
+0 -> Box(Modifier.fillMaxSize().background(Color(0xFF0F0F14)), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(color = Color(0xFF3B82F6)); Spacer(Modifier.height(16.dp)); Text("Checking Connection...", color = Color.White) } }
+2 -> Box(Modifier.fillMaxSize().background(Color(0xFF0F0F14)), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("No Internet Connection", color = Color.White); Spacer(Modifier.height(16.dp)); Button(onClick = { tc++ }) { Text("Retry") } } }
 else -> Column(Modifier.fillMaxSize()) { Box(Modifier.weight(1f)) { MythicScriptApp(viewModel = vm) }; val b = remember { Banner(this@MainActivity) }; AndroidView(factory = { b }, modifier = Modifier.fillMaxWidth().navigationBarsPadding()) }
 } } } }
