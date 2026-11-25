@@ -21,7 +21,8 @@ object LocaleManager {
 
     fun setLanguage(context: Context, language: String) {
         val normalized = if (language == BURMESE) BURMESE else ENGLISH
-        preferences(context).edit().putString(KEY_LANGUAGE, normalized).apply()
+        // Commit before recreate() so the new activity always reads the new language.
+        preferences(context).edit().putString(KEY_LANGUAGE, normalized).commit()
         Locale.setDefault(localeFor(normalized))
     }
 

@@ -36,4 +36,33 @@ class LocalizationTest {
             LocaleManager.localizedContext(app).getString(R.string.tab_skin_scripts),
         )
     }
+
+    @Test
+    fun `toggling language repeatedly keeps resources in sync`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        try {
+            LocaleManager.setLanguage(app, LocaleManager.ENGLISH)
+            assertEquals("Skin Scripts", app.getString(R.string.tab_skin_scripts))
+
+            assertEquals(LocaleManager.BURMESE, LocaleManager.toggleLanguage(app))
+            assertEquals(
+                "စကင် စကရစ်ပ်များ",
+                LocaleManager.localizedContext(app).getString(R.string.tab_skin_scripts),
+            )
+
+            assertEquals(LocaleManager.ENGLISH, LocaleManager.toggleLanguage(app))
+            assertEquals(
+                "Skin Scripts",
+                LocaleManager.localizedContext(app).getString(R.string.tab_skin_scripts),
+            )
+
+            assertEquals(LocaleManager.BURMESE, LocaleManager.toggleLanguage(app))
+            assertEquals(
+                "စကင် စကရစ်ပ်များ",
+                LocaleManager.localizedContext(app).getString(R.string.tab_skin_scripts),
+            )
+        } finally {
+            LocaleManager.setLanguage(app, LocaleManager.ENGLISH)
+        }
+    }
 }

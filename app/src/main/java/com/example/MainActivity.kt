@@ -125,7 +125,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        UnityAdManager.release()
+        // Locale changes recreate the activity. Keep the Unity session alive across that
+        // configuration change; only tear it down when the activity is really finishing.
+        if (isFinishing) {
+            UnityAdManager.release()
+        }
         super.onDestroy()
     }
 
@@ -153,36 +157,73 @@ private fun StatusScreen(content: @Composable () -> Unit) {
 @Composable
 private fun UnityBanner(activity: Activity) {
     val initialized by UnityAdManager.isInitialized.collectAsStateWithLifecycle()
-    var bannerView by remember { mutableStateOf<BannerView?>(null) }
-    var loadAttempts by remember { mutableIntStateOf(0) }
+    var loadAttempts by remember(activity) { mutableIntStateOf(0) }
+    val banner = remember(activity) {
+        BannerView(
+            activity,
+            UnityAdManager.BANNER_PLACEMENT,
+            UnityBannerSize(320, 50),
+        )
+    }
 
-    fun requestBannerLoad(banner: BannerView) {
+    fun requestBannerLoad() {
         if (loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS) return
         loadAttempts++
         UnityAdManager.onBannerLoading()
         banner.load()
     }
 
-    DisposableEffect(bannerView) {
+    DisposableEffect(activity) {
+        banner.setListener(object : BannerView.IListener {
+            override fun onBannerLoaded(banner: BannerView) {
+                UnityAdManager.onBannerLoaded()
+            }
+
+            override fun onBannerShown(banner: BannerView) {
+                UnityAdManager.onBannerShown()
+            }
+
+            override fun onBannerClick(banner: BannerView) = Unit
+
+            override fun onBannerFailedToLoad(
+                banner: BannerView,
+                errorInfo: BannerErrorInfo,
+            ) {
+                UnityAdManager.onBannerFailed(
+                    errorInfo.errorCode.toString(),
+                    errorInfo.errorMessage.orEmpty(),
+                )
+                if (loadAttempts < BANNER_MAX_LOAD_ATTEMPTS && banner.parent != null) {
+                    banner.postDelayed(
+                        {
+                            if (banner.parent != null) requestBannerLoad()
+                        },
+                        BANNER_RETRY_DELAY_MS,
+                    )
+                }
+            }
+
+            override fun onBannerLeftApplication(banner: BannerView) = Unit
+        })
+
         onDispose {
-            bannerView?.destroy()
+            banner.setListener(null)
+            banner.destroy()
         }
     }
 
-    LaunchedEffect(initialized, bannerView) {
-        val banner = bannerView ?: return@LaunchedEffect
+    LaunchedEffect(initialized, activity) {
         if (initialized && loadAttempts == 0) {
-            requestBannerLoad(banner)
+            requestBannerLoad()
         }
     }
 
     // BannerView.load() also initializes the SDK. If the init callback is delayed or lost,
     // this fallback still gives the banner a chance to load instead of staying blank forever.
-    LaunchedEffect(bannerView) {
-        val banner = bannerView ?: return@LaunchedEffect
+    LaunchedEffect(activity) {
         delay(BANNER_INIT_FALLBACK_DELAY_MS)
         if (loadAttempts == 0) {
-            requestBannerLoad(banner)
+            requestBannerLoad()
         }
     }
 
@@ -199,44 +240,6 @@ private fun UnityBanner(activity: Activity) {
                 .height(BannerHeight),
             factory = { context ->
                 FrameLayout(context).apply {
-                    val banner = BannerView(
-                        activity,
-                        UnityAdManager.BANNER_PLACEMENT,
-                        UnityBannerSize(320, 50),
-                    )
-
-                    banner.setListener(object : BannerView.IListener {
-                        override fun onBannerLoaded(banner: BannerView) {
-                            UnityAdManager.onBannerLoaded()
-                        }
-
-                        override fun onBannerShown(banner: BannerView) {
-                            UnityAdManager.onBannerShown()
-                        }
-
-                        override fun onBannerClick(banner: BannerView) = Unit
-
-                        override fun onBannerFailedToLoad(
-                            banner: BannerView,
-                            errorInfo: BannerErrorInfo,
-                        ) {
-                            UnityAdManager.onBannerFailed(
-                                errorInfo.errorCode.toString(),
-                                errorInfo.errorMessage.orEmpty(),
-                            )
-                            if (loadAttempts < BANNER_MAX_LOAD_ATTEMPTS && banner.parent != null) {
-                                banner.postDelayed(
-                                    {
-                                        if (banner.parent != null) requestBannerLoad(banner)
-                                    },
-                                    BANNER_RETRY_DELAY_MS,
-                                )
-                            }
-                        }
-
-                        override fun onBannerLeftApplication(banner: BannerView) = Unit
-                    })
-
                     addView(
                         banner,
                         FrameLayout.LayoutParams(
@@ -245,14 +248,11 @@ private fun UnityBanner(activity: Activity) {
                             Gravity.CENTER,
                         ),
                     )
-                    loadAttempts = 0
-                    bannerView = banner
                 }
             },
         )
     }
 }
-
 
 private const val BANNER_MAX_LOAD_ATTEMPTS = 3
 private const val BANNER_RETRY_DELAY_MS = 15_000L
