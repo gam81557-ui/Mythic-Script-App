@@ -13,6 +13,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.localization.LocaleManager
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryDark,
@@ -120,10 +121,16 @@ fun MythicScriptTheme(
         )
     }
 
+    val typography = if (LocaleManager.isBurmese(LocalContext.current)) {
+        BurmeseTypography
+    } else {
+        Typography
+    }
+
     CompositionLocalProvider(LocalSemanticColors provides semanticColors) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = typography,
             content = content,
         )
     }

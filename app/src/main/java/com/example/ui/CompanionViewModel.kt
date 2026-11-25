@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.R
 import com.example.data.catalog.HeroCatalogProvider
 import com.example.data.catalog.HeroPortraitProvider
 import com.example.data.catalog.HeroRoleMapper
@@ -20,6 +21,10 @@ import com.example.data.remote.RemoteConfigManager
 import com.example.data.remote.RemoteConfigState
 import com.example.data.remote.RemoteSkinEntry
 import com.example.data.repository.CompanionRepository
+import com.example.localization.LocaleManager
+import com.example.localization.localizedLabel
+import com.example.localization.localizedMessage
+import com.example.localization.localizedShortLabel
 import com.example.domain.model.HeroAttributes
 import com.example.domain.model.HeroDetailTab
 import com.example.domain.model.HeroProfile
@@ -94,6 +99,15 @@ private data class ModalAndTransientState(
 )
 
 class CompanionViewModel(application: Application) : AndroidViewModel(application) {
+
+    private fun tr(resId: Int, vararg args: Any): String =
+        LocaleManager.localizedContext(getApplication()).getString(resId, *args)
+
+    private fun shizukuLabel(state: ShizukuConnectionState): String =
+        state.localizedShortLabel(LocaleManager.localizedContext(getApplication()))
+
+    private fun errorMessage(error: Throwable, fallbackRes: Int): String =
+        error.localizedMessage(LocaleManager.localizedContext(getApplication()), fallbackRes)
 
     private val database = CompanionDatabase.getInstance(application)
     private val preferences = AppPreferences(application)
@@ -247,7 +261,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             val safeSkinName = if (!entity.isUserImported && remoteMatch != null) {
                 remoteMatch.name
             } else {
-                entity.skinName.ifBlank { "Default Skin" }
+                entity.skinName.ifBlank { tr(R.string.default_skin) }
             }
             val rawTier = if (!entity.isUserImported && remoteMatch != null) {
                 remoteMatch.tierTag
@@ -305,7 +319,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             SkinScriptItem(
                 scriptId = safeId,
                 heroId = activeHero.id,
-                skinName = entry.name.ifBlank { "Default Skin" },
+                skinName = entry.name.ifBlank { tr(R.string.default_skin) },
                 tierTag = entry.tierTag,
                 version = entry.version,
                 compatibilityNotes = entry.notes,
@@ -413,20 +427,27 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     remoteConfigStateFlow.value = RemoteConfigState.Ready(config)
                     probeSelectedHeroLinks(heroId = selectedHeroIdFlow.value, remoteConfig = config)
                     if (showFeedbackToast) {
-                        val status = if (config.maintenanceMode) "Maintenance active" else "Config synced"
-                        snackbarMessageFlow.value =
-                            "$status • ${config.availableHeroes.size} heroes, ${config.skinEntries.size} skins"
+                        val status = tr(
+                            if (config.maintenanceMode) R.string.msg_maintenance_active
+                            else R.string.msg_config_synced
+                        )
+                        snackbarMessageFlow.value = tr(
+                            R.string.msg_config_summary,
+                            status,
+                            config.availableHeroes.size,
+                            config.skinEntries.size,
+                        )
                     }
                 }
                 .onFailure { err ->
                     if (!allowBackgroundRemoteSync) return@onFailure
-                    val msg = err.message ?: "Unable to reach remote config."
+                    val msg = errorMessage(err, R.string.msg_unable_remote_config)
                     remoteConfigStateFlow.value = RemoteConfigState.Failed(
                         errorMessage = msg,
                         lastKnownConfig = lastKnownRemoteConfig,
                     )
                     if (showFeedbackToast) {
-                        snackbarMessageFlow.value = "Remote config offline: $msg"
+                        snackbarMessageFlow.value = tr(R.string.msg_remote_config_offline, msg)
                     }
                 }
         }
@@ -456,7 +477,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         repository.markScriptUnavailable(
             script = script,
             httpCode = httpCode,
-            message = "This skin is currently unavailable ($httpCode). Please try another skin.",
+            message = tr(R.string.msg_skin_unavailable_code, httpCode),
         )
     }
 
@@ -480,13 +501,15 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun downloadSkinScript(script: SkinScriptItem) {
         selectScript(script.scriptId)
         if (script.isUnavailable) {
-            snackbarMessageFlow.value =
-                "'${script.skinName}' is currently unavailable (404). Please try another skin."
+            snackbarMessageFlow.value = tr(
+                R.string.msg_skin_unavailable_named,
+                script.skinName,
+            )
             return
         }
         val url = script.downloadUrl.trim()
         if (url.isEmpty()) {
-            snackbarMessageFlow.value = "No download link available for '${script.skinName}'."
+            snackbarMessageFlow.value = tr(R.string.msg_no_download_link, script.skinName)
             return
         }
         if (script.lifecycleState.isBusy) return
@@ -503,7 +526,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         )
         if (requireAd && gate != null) {
             if (!gate(onProceed)) {
-                snackbarMessageFlow.value = "Please wait for the current ad to finish."
+                snackbarMessageFlow.value = tr(R.string.msg_wait_for_ad)
             }
         } else {
             if (requireAd) {
@@ -533,15 +556,22 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
                 val remoteConfig = currentRemoteConfig()
                 if (remoteConfig != null && !remoteConfig.canInjectRemotely) {
-                    snackbarMessageFlow.value =
-                        "Downloaded '${script.skinName}' (${staged.relativePaths.size} file(s)). Injection paused during maintenance."
+                    snackbarMessageFlow.value = tr(
+                        R.string.msg_downloaded_paused,
+                        script.skinName,
+                        staged.relativePaths.size,
+                    )
                     return@onSuccess
                 }
 
                 val currentShizuku = uiState.value.shizukuState
                 if (!currentShizuku.isReadyForIo) {
-                    snackbarMessageFlow.value =
-                        "Downloaded '${script.skinName}' (${staged.relativePaths.size} file(s)). Connect Shizuku (${currentShizuku.shortLabel()}) to inject."
+                    snackbarMessageFlow.value = tr(
+                        R.string.msg_downloaded_connect_shizuku,
+                        script.skinName,
+                        staged.relativePaths.size,
+                        shizukuLabel(currentShizuku),
+                    )
                     showDiagnosticsSheetFlow.value = true
                     return@onSuccess
                 }
@@ -550,20 +580,22 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             }.onFailure { err ->
                 if (err is RemoteSkinUnavailableException) {
                     transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-                    val unavailableMsg =
-                        "This skin is currently unavailable (${err.httpCode}). Please try another skin."
+                    val unavailableMsg = tr(R.string.msg_skin_unavailable_code, err.httpCode)
                     repository.markScriptUnavailable(
                         script = script,
                         httpCode = err.httpCode,
                         message = unavailableMsg,
                     )
-                    snackbarMessageFlow.value =
-                        "'${script.skinName}' is unavailable (${err.httpCode}). Try another skin."
+                    snackbarMessageFlow.value = tr(
+                        R.string.msg_skin_unavailable_named_code,
+                        script.skinName,
+                        err.httpCode,
+                    )
                 } else {
-                    val reason = err.message ?: "Download failed."
+                    val reason = errorMessage(err, R.string.msg_download_failed_generic)
                     transientScriptStatesFlow.value =
                         transientScriptStatesFlow.value + (script.scriptId to ScriptLifecycleState.Error(reason))
-                    snackbarMessageFlow.value = "Download failed for '${script.skinName}': $reason"
+                    snackbarMessageFlow.value = tr(R.string.msg_download_failed, script.skinName, reason)
                 }
             }
         }
@@ -595,7 +627,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun openShizukuApp() {
         if (!shizukuBridge.openShizukuApp()) {
-            snackbarMessageFlow.value = "Shizuku app is not installed on this device."
+            snackbarMessageFlow.value = tr(R.string.msg_shizuku_not_installed)
         }
     }
 
@@ -649,7 +681,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                             val stub = SkinScriptItem(
                                 scriptId = safeId,
                                 heroId = heroId,
-                                skinName = entry.name.ifBlank { "Default Skin" },
+                                skinName = entry.name.ifBlank { tr(R.string.default_skin) },
                                 tierTag = entry.tierTag,
                                 version = entry.version,
                                 compatibilityNotes = entry.notes,
@@ -671,7 +703,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                             repository.markScriptUnavailable(
                                 script = stub,
                                 httpCode = status,
-                                message = "This skin is currently unavailable ($status). Please try another skin.",
+                                message = tr(R.string.msg_skin_unavailable_code, status),
                             )
                         }
                     }
@@ -703,8 +735,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         selectScript(script.scriptId)
         if (script.lifecycleState.isBusy) return
         if (script.isUnavailable) {
-            snackbarMessageFlow.value =
-                "'${script.skinName}' is currently unavailable (404). Please try another skin."
+            snackbarMessageFlow.value = tr(
+                R.string.msg_skin_unavailable_named,
+                script.skinName,
+            )
             return
         }
 
@@ -717,16 +751,19 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val remoteConfig = currentRemoteConfig()
         if (remoteConfig != null && !remoteConfig.canInjectRemotely) {
             val reason = remoteConfig.maintenanceMessage.ifBlank {
-                "Script injection is currently disabled by remote configuration."
+                tr(R.string.msg_injection_disabled)
             }
             snackbarMessageFlow.value = reason
             return
         }
 
         if (!uiState.value.shizukuState.isReadyForIo) {
-            val prefix = if (script.isDownloaded) "Downloaded file saved! " else ""
-            snackbarMessageFlow.value =
-                "${prefix}Grant/start Shizuku UserService (${uiState.value.shizukuState.shortLabel()}) to inject."
+            val stateLabel = shizukuLabel(uiState.value.shizukuState)
+            snackbarMessageFlow.value = if (script.isDownloaded) {
+                tr(R.string.msg_downloaded_grant_shizuku, stateLabel)
+            } else {
+                tr(R.string.msg_grant_shizuku, stateLabel)
+            }
             showDiagnosticsSheetFlow.value = true
             return
         }
@@ -753,12 +790,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         result.onSuccess {
             transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
             snackbarMessageFlow.value = if (fromAutoDownload) {
-                "Downloaded & injected '${script.skinName}' with backup saved."
+                tr(R.string.msg_downloaded_injected, script.skinName)
             } else {
-                "Injected '${script.skinName}' with backup saved."
+                tr(R.string.msg_injected, script.skinName)
             }
         }.onFailure { err ->
-            snackbarMessageFlow.value = err.message ?: "Injection failed."
+            snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
         }
     }
 
@@ -768,8 +805,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val targetPkg = uiState.value.targetPackage
 
         if (!uiState.value.shizukuState.isReadyForIo) {
-            snackbarMessageFlow.value =
-                "Shizuku UserService required to restore files under /Android/data/."
+            snackbarMessageFlow.value = tr(R.string.msg_restore_requires_shizuku)
             showDiagnosticsSheetFlow.value = true
             return
         }
@@ -785,9 +821,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             )
             result.onSuccess {
                 transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-                snackbarMessageFlow.value = "Restored original files for ${uiState.value.selectedHero.name}."
+                snackbarMessageFlow.value = tr(R.string.msg_restored, uiState.value.selectedHero.name)
             }.onFailure { err ->
-                snackbarMessageFlow.value = err.message ?: "Restore failed."
+                snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)
             }
         }
     }
@@ -798,10 +834,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             repository.clearBackup(script.scriptId)
                 .onSuccess {
                     transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-                    snackbarMessageFlow.value = "Cleared backup files for '${script.skinName}'."
+                    snackbarMessageFlow.value = tr(R.string.msg_backup_cleared, script.skinName)
                 }
                 .onFailure { err ->
-                    snackbarMessageFlow.value = err.message ?: "Failed to clear backup."
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_clear_backup_failed)
                 }
         }
     }
@@ -815,7 +851,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     pendingImportPreviewFlow.value = preview
                 }
                 .onFailure { err ->
-                    snackbarMessageFlow.value = err.message ?: "Failed to inspect .zip archive."
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_zip_inspect_failed)
                 }
             isImportingZipFlow.value = false
         }
@@ -842,7 +878,11 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             selectedHeroIdFlow.value = saved.heroId
             selectedScriptByHeroFlow.value = selectedScriptByHeroFlow.value + (saved.heroId to saved.scriptId)
             activeDetailTabFlow.value = HeroDetailTab.SCRIPTS
-            snackbarMessageFlow.value = "Staged '${saved.skinName}' (${preview.relativeTargetPaths.size} file(s))."
+            snackbarMessageFlow.value = tr(
+                R.string.msg_staged,
+                saved.skinName,
+                preview.relativeTargetPaths.size,
+            )
         }
     }
 
@@ -870,10 +910,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             )
             repository.deleteImportedScript(entity)
                 .onSuccess {
-                    snackbarMessageFlow.value = "Removed '${script.skinName}'."
+                    snackbarMessageFlow.value = tr(R.string.msg_removed, script.skinName)
                 }
                 .onFailure { err ->
-                    snackbarMessageFlow.value = err.message ?: "Unable to delete script."
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_delete_failed)
                 }
         }
     }
@@ -882,10 +922,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             repository.setTargetPackage(newPackage)
                 .onSuccess { validPkg ->
-                    snackbarMessageFlow.value = "Target package set to $validPkg"
+                    snackbarMessageFlow.value = tr(R.string.msg_target_package_set, validPkg)
                 }
                 .onFailure { err ->
-                    snackbarMessageFlow.value = err.message ?: "Invalid package name."
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_invalid_package)
                 }
         }
     }
@@ -928,9 +968,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             "DOWNLOADED" -> ScriptLifecycleState.Downloaded
             "UNAVAILABLE" -> ScriptLifecycleState.Unavailable(
                 httpCode = if (entity.errorMessage?.contains("410") == true) 410 else 404,
-                reason = entity.errorMessage ?: "This skin is currently unavailable. Please try another skin.",
+                reason = entity.errorMessage ?: tr(R.string.unavailable_skin_message),
             )
-            "ERROR" -> ScriptLifecycleState.Error(entity.errorMessage ?: "Failed")
+            "ERROR" -> ScriptLifecycleState.Error(entity.errorMessage ?: tr(R.string.msg_status_failed))
             else -> if (isSelected) ScriptLifecycleState.Selected else ScriptLifecycleState.Idle
         }
     }
@@ -1022,17 +1062,21 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     id = slugId,
                     name = heroName,
                     aliases = emptyList(),
-                    title = "${skins.size} Skin${if (skins.size == 1) "" else "s"}",
+                    title = tr(R.string.dynamic_hero_title, skins.size),
                     role = resolvedRole,
-                    specialty = if (resolvedRole == HeroRole.ALL) "MLBB Hero" else resolvedRole.label,
-                    lane = "All Lanes",
+                    specialty = if (resolvedRole == HeroRole.ALL) {
+                        tr(R.string.msg_dynamic_role)
+                    } else {
+                        resolvedRole.localizedLabel(LocaleManager.localizedContext(getApplication()))
+                    },
+                    lane = tr(R.string.msg_all_lanes),
                     previewImageUrl = portraitUrl,
                     fallbackImageUrl = fallbackImg,
                     skinCount = skins.size,
                     attributes = HeroAttributes(durability = 55, offense = 72, controlEffect = 55, difficulty = 55),
                     skills = emptyList(),
                     combos = emptyList(),
-                    companionNotes = "Synced from remote skin configuration (${skins.size} skin entry/entries).",
+                    companionNotes = tr(R.string.msg_synced_notes, skins.size),
                 )
             }
         }

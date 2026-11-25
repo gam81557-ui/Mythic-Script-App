@@ -108,3 +108,18 @@ val Typography = Typography(
         letterSpacing = 0.2.sp,
     ),
 )
+
+val BurmeseTypography = Typography(
+    displaySmall = Typography.displaySmall.copy(fontFamily = FontFamily.Default),
+    headlineMedium = Typography.headlineMedium.copy(fontFamily = FontFamily.Default),
+    headlineSmall = Typography.headlineSmall.copy(fontFamily = FontFamily.Default),
+    titleLarge = Typography.titleLarge.copy(fontFamily = FontFamily.Default),
+    titleMedium = Typography.titleMedium.copy(fontFamily = FontFamily.Default),
+    titleSmall = Typography.titleSmall.copy(fontFamily = FontFamily.Default),
+    bodyLarge = Typography.bodyLarge.copy(fontFamily = FontFamily.Default),
+    bodyMedium = Typography.bodyMedium.copy(fontFamily = FontFamily.Default),
+    bodySmall = Typography.bodySmall.copy(fontFamily = FontFamily.Default),
+    labelLarge = Typography.labelLarge.copy(fontFamily = FontFamily.Default),
+    labelMedium = Typography.labelMedium.copy(fontFamily = FontFamily.Default),
+    labelSmall = Typography.labelSmall.copy(fontFamily = FontFamily.Default),
+)

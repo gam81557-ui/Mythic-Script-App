@@ -37,12 +37,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.localization.LocaleManager
 import com.example.ui.CompanionViewModel
 import com.example.ui.MythicScriptApp
 import com.example.ui.UnityAdDebugState
@@ -54,6 +56,10 @@ import com.unity3d.services.banners.UnityBannerSize
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleManager.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,18 +88,26 @@ class MainActivity : ComponentActivity() {
                         STATUS_CHECKING -> StatusScreen {
                             CircularProgressIndicator(color = Color(0xFF3B82F6))
                             Spacer(Modifier.height(16.dp))
-                            Text("Checking Connection...", color = Color.White)
+                            Text(stringResource(R.string.status_checking_connection), color = Color.White)
                         }
 
                         STATUS_OFFLINE -> StatusScreen {
-                            Text("No Internet Connection", color = Color.White)
+                            Text(stringResource(R.string.status_no_internet), color = Color.White)
                             Spacer(Modifier.height(16.dp))
-                            Button(onClick = { retryCount++ }) { Text("Retry") }
+                            Button(onClick = { retryCount++ }) {
+                                Text(stringResource(R.string.action_retry))
+                            }
                         }
 
                         else -> Column(modifier = Modifier.fillMaxSize()) {
                             Box(modifier = Modifier.weight(1f)) {
-                                MythicScriptApp(viewModel = viewModel)
+                                MythicScriptApp(
+                                    viewModel = viewModel,
+                                    onToggleLanguage = {
+                                        LocaleManager.toggleLanguage(this@MainActivity)
+                                        recreate()
+                                    },
+                                )
                             }
                             UnityBanner()
                         }

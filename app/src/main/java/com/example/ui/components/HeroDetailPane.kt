@@ -83,6 +83,8 @@ import com.example.domain.model.HeroProfile
 import com.example.domain.model.HeroRole
 import com.example.domain.model.ScriptLifecycleState
 import com.example.domain.model.SkinScriptItem
+import com.example.localization.localizedLabel
+import com.example.localization.localizedShortLabel
 import com.example.shizuku.ShizukuConnectionState
 import com.example.ui.theme.LocalSemanticColors
 
@@ -127,7 +129,7 @@ fun HeroDetailPane(
                 Tab(
                     selected = tab == activeTab,
                     onClick = { onTabSelected(tab) },
-                    text = { Text(text = tab.label) },
+                    text = { Text(text = tab.localizedLabel()) },
                     modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
                 )
             }
@@ -216,7 +218,7 @@ private fun HeroBannerHeader(
                         primaryUrl = hero.previewImageUrl,
                         fallbackUrl = hero.fallbackImageUrl,
                         label = hero.name,
-                        contentDescription = "${hero.name} preview portrait",
+                        contentDescription = stringResource(R.string.hero_portrait, hero.name),
                         modifier = Modifier
                             .size(52.dp)
                             .clip(RoundedCornerShape(12.dp)),
@@ -240,7 +242,7 @@ private fun HeroBannerHeader(
                         color = semantic.activeContainer,
                     ) {
                         Text(
-                            text = "Active: ${activeScript.skinName}",
+                            text = stringResource(R.string.active_script_prefix, activeScript.skinName),
                             style = MaterialTheme.typography.labelMedium,
                             color = semantic.active,
                             fontWeight = FontWeight.SemiBold,
@@ -256,8 +258,8 @@ private fun HeroBannerHeader(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                BannerTagChip(text = if (hero.role == HeroRole.ALL) "MLBB" else hero.role.label)
-                hero.secondaryRole?.let { BannerTagChip(text = it.label) }
+                BannerTagChip(text = if (hero.role == HeroRole.ALL) "MLBB" else hero.role.localizedLabel())
+                hero.secondaryRole?.let { BannerTagChip(text = it.localizedLabel()) }
                 BannerTagChip(text = hero.specialty)
             }
         }
@@ -311,13 +313,13 @@ private fun SkinScriptsTab(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "${hero.name} Skin Bundles",
+                            text = stringResource(R.string.hero_skin_bundles, hero.name),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         val subtitle = if (unavailableCountForHero > 0) {
-                            "${scripts.size} shown • $unavailableCountForHero unavailable (404)"
+                            stringResource(R.string.skins_shown_unavailable, scripts.size, unavailableCountForHero)
                         } else {
-                            "${scripts.size} script profile(s) available • Single active per hero"
+                            stringResource(R.string.skins_available, scripts.size)
                         }
                         Text(
                             text = subtitle,
@@ -357,9 +359,9 @@ private fun SkinScriptsTab(
                         label = {
                             Text(
                                 text = if (hideUnavailableSkins) {
-                                    "Showing Working Only ($unavailableCountForHero hidden)"
+                                    stringResource(R.string.show_working_only, unavailableCountForHero)
                                 } else {
-                                    "Hide Unavailable ($unavailableCountForHero)"
+                                    stringResource(R.string.hide_unavailable, unavailableCountForHero)
                                 },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -401,11 +403,11 @@ private fun SkinScriptsTab(
                             tint = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            text = "All $unavailableCountForHero skin(s) are unavailable (404)",
+                            text = stringResource(R.string.all_skins_unavailable, unavailableCountForHero),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = "Try another hero or import a local .zip skin bundle above.",
+                            text = stringResource(R.string.all_skins_unavailable_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -415,7 +417,7 @@ private fun SkinScriptsTab(
                                 .minimumInteractiveComponentSize()
                                 .testTag("show_unavailable_button"),
                         ) {
-                            Text("Show Unavailable Skins")
+                            Text(stringResource(R.string.show_unavailable_skins))
                         }
                     }
                 }
@@ -439,11 +441,11 @@ private fun SkinScriptsTab(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = "No scripts staged for ${hero.name}",
+                            text = stringResource(R.string.no_scripts_staged, hero.name),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = "Tap Import .zip above to stage a custom skin bundle for ${hero.name}.",
+                            text = stringResource(R.string.no_scripts_staged_hint, hero.name),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -476,6 +478,7 @@ private fun SkinScriptCard(
 ) {
     val context = LocalContext.current
     val semantic = LocalSemanticColors.current
+    val defaultSkin = stringResource(R.string.default_skin)
     val isActive = script.lifecycleState is ScriptLifecycleState.Injected
     val isError = script.lifecycleState is ScriptLifecycleState.Error
     val isUnavailable = script.isUnavailable
@@ -524,7 +527,7 @@ private fun SkinScriptCard(
                     primaryUrl = script.imageUrl,
                     fallbackUrl = script.fallbackImageUrl,
                     label = script.skinName,
-                    contentDescription = "${script.skinName} preview",
+                    contentDescription = stringResource(R.string.hero_portrait, script.skinName),
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(12.dp)),
@@ -534,7 +537,7 @@ private fun SkinScriptCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    val displayTitle = script.skinName.ifBlank { "Default Skin" }
+                    val displayTitle = script.skinName.ifBlank { defaultSkin }
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.titleMedium,
@@ -556,7 +559,7 @@ private fun SkinScriptCard(
                             if (script.tagBadgeUrl.isNotBlank()) {
                                 RemoteTagBadgeImage(
                                     url = script.tagBadgeUrl,
-                                    contentDescription = "$displayTitle tier badge",
+                                    contentDescription = stringResource(R.string.tier_badge, displayTitle),
                                     modifier = Modifier.testTag("script_tag_badge_${script.scriptId}"),
                                 )
                             } else if (safeTextTag != null) {
@@ -577,7 +580,7 @@ private fun SkinScriptCard(
 
                     if (script.isUserImported) {
                         Text(
-                            text = "${script.version} • Imported",
+                            text = stringResource(R.string.imported_suffix, script.version),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -601,7 +604,7 @@ private fun SkinScriptCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.LinkOff,
-                                contentDescription = "Skin download unavailable",
+                                contentDescription = stringResource(R.string.skin_download_unavailable),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(14.dp),
                             )
@@ -624,12 +627,12 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = if (isError) Icons.Filled.Refresh else Icons.Filled.Download,
-                            contentDescription = if (isError) "Retry download" else stringResource(R.string.action_download_skin),
+                            contentDescription = if (isError) stringResource(R.string.action_retry_download) else stringResource(R.string.action_download_skin),
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isError) "Retry" else stringResource(R.string.action_download_skin),
+                            text = if (isError) stringResource(R.string.action_retry) else stringResource(R.string.action_download_skin),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
@@ -644,12 +647,12 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Bolt,
-                            contentDescription = "Inject downloaded skin",
+                            contentDescription = stringResource(R.string.inject_downloaded_skin),
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Inject",
+                            text = stringResource(R.string.action_inject),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
@@ -662,7 +665,7 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DeleteOutline,
-                            contentDescription = "Remove imported script",
+                            contentDescription = stringResource(R.string.remove_imported_script),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -701,7 +704,7 @@ private fun SkinScriptCard(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
                         Text(
-                            text = "${script.targetRelativePaths.size} file(s)",
+                            text = stringResource(R.string.files_count, script.targetRelativePaths.size),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         )
@@ -723,7 +726,7 @@ private fun SkinScriptCard(
                                 )
                                 val sizeText = Formatter.formatShortFileSize(context, script.backupByteSize)
                                 Text(
-                                    text = "Backup ($sizeText)",
+                                    text = stringResource(R.string.backup_size, sizeText),
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             }
@@ -735,25 +738,25 @@ private fun SkinScriptCard(
             when (val state = script.lifecycleState) {
                 is ScriptLifecycleState.Downloading -> {
                     OperationProgressBlock(
-                        label = "Downloading remote skin package…",
+                        label = stringResource(R.string.downloading_remote_package),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.BackingUp -> {
                     OperationProgressBlock(
-                        label = "Backing up original: ${state.currentFile}",
+                        label = stringResource(R.string.backing_up_original, state.currentFile),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.Injecting -> {
                     OperationProgressBlock(
-                        label = "Injecting asset: ${state.currentFile}",
+                        label = stringResource(R.string.injecting_asset, state.currentFile),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.Restoring -> {
                     OperationProgressBlock(
-                        label = "Restoring original: ${state.currentFile}",
+                        label = stringResource(R.string.restoring_original, state.currentFile),
                         progress = state.progress,
                     )
                 }
@@ -865,13 +868,13 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        text = "Hero Attribute Profile",
+                        text = stringResource(R.string.hero_attribute_profile),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    AttributeMeterRow("Durability", hero.attributes.durability, MaterialTheme.colorScheme.secondary)
-                    AttributeMeterRow("Offense", hero.attributes.offense, MaterialTheme.colorScheme.error)
-                    AttributeMeterRow("Control Effect", hero.attributes.controlEffect, MaterialTheme.colorScheme.primary)
-                    AttributeMeterRow("Difficulty", hero.attributes.difficulty, MaterialTheme.colorScheme.tertiary)
+                    AttributeMeterRow(stringResource(R.string.attribute_durability), hero.attributes.durability, MaterialTheme.colorScheme.secondary)
+                    AttributeMeterRow(stringResource(R.string.attribute_offense), hero.attributes.offense, MaterialTheme.colorScheme.error)
+                    AttributeMeterRow(stringResource(R.string.attribute_control_effect), hero.attributes.controlEffect, MaterialTheme.colorScheme.primary)
+                    AttributeMeterRow(stringResource(R.string.attribute_difficulty), hero.attributes.difficulty, MaterialTheme.colorScheme.tertiary)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
@@ -886,7 +889,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
         if (hero.combos.isNotEmpty()) {
             item {
                 Text(
-                    text = "Recommended Skill Combos",
+                    text = stringResource(R.string.recommended_skill_combos),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -898,7 +901,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "This hero was dynamically discovered from the remote skin configuration. Switch to the Skin Scripts tab to browse and manage its remote skins.",
+                        text = stringResource(R.string.dynamic_hero_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(14.dp),
@@ -975,7 +978,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
         if (hero.skills.isNotEmpty()) {
             item {
                 Text(
-                    text = "Skill Kit Breakdown",
+                    text = stringResource(R.string.skill_kit_breakdown),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -1100,20 +1103,20 @@ fun DockedScriptActionBar(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = selectedScript?.skinName ?: "No Script Selected",
+                        text = selectedScript?.skinName ?: stringResource(R.string.no_script_selected),
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = when {
-                            isUnavailable -> "Unavailable (404) • Please choose another skin"
-                            isBlockedByRemote -> "Injection paused by remote config • Restore still enabled"
-                            selectedScript == null -> "Select a skin script above to manage injection"
+                            isUnavailable -> stringResource(R.string.unavailable_choose_other)
+                            isBlockedByRemote -> stringResource(R.string.injection_paused_remote)
+                            selectedScript == null -> stringResource(R.string.select_script_hint)
                             selectedScript.isDownloaded && !shizukuState.isReadyForIo ->
-                                "Downloaded & saved • Connect Shizuku (${shizukuState.shortLabel()}) to inject"
-                            !shizukuState.isReadyForIo -> "Shizuku blocked: ${shizukuState.shortLabel()} (tap pill to configure)"
-                            else -> "Ready via Shizuku ${shizukuState.shortLabel()} • ${selectedScript.lifecycleState.displayLabel()}"
+                                stringResource(R.string.downloaded_connect_shizuku, shizukuState.localizedShortLabel())
+                            !shizukuState.isReadyForIo -> stringResource(R.string.shizuku_blocked, shizukuState.localizedShortLabel())
+                            else -> stringResource(R.string.ready_via_shizuku, shizukuState.localizedShortLabel(), selectedScript.lifecycleState.localizedLabel())
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isUnavailable || isBlockedByRemote) MaterialTheme.colorScheme.error
@@ -1137,7 +1140,7 @@ fun DockedScriptActionBar(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Fix Shizuku")
+                        Text(stringResource(R.string.action_fix_shizuku))
                     }
                 }
             }

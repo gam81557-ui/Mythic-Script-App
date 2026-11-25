@@ -50,6 +50,7 @@ import com.example.R
 import com.example.domain.model.HeroProfile
 import com.example.domain.model.HeroRole
 import com.example.data.catalog.HeroPortraitProvider
+import com.example.localization.localizedLabel
 
 private val DarkGridCanvas = Color(0xFF0B101B)
 private val DarkSearchSurface = Color(0xFF141C2E)
@@ -107,7 +108,7 @@ fun HeroRosterPane(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Clear,
-                                contentDescription = "Clear search",
+                                contentDescription = stringResource(R.string.clear_search),
                                 tint = Color(0xFFCBD5E1),
                             )
                         }
@@ -140,7 +141,7 @@ fun HeroRosterPane(
                         onClick = { onRoleSelected(role) },
                         label = {
                             Text(
-                                text = role.label,
+                                text = role.localizedLabel(),
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                             )
                         },
@@ -179,12 +180,12 @@ fun HeroRosterPane(
                             tint = Color(0xFF94A3B8),
                         )
                         Text(
-                            text = "No matching heroes found",
+                            text = stringResource(R.string.no_matching_heroes),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                         )
                         Text(
-                            text = "Try clearing the search term or tapping Show All.",
+                            text = stringResource(R.string.no_matching_heroes_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF94A3B8),
                             textAlign = TextAlign.Center,
@@ -247,7 +248,7 @@ private fun HeroGridCard(
                 primaryUrl = heroPortrait,
                 fallbackUrl = heroFallback,
                 label = hero.name,
-                contentDescription = "${hero.name} portrait",
+                contentDescription = stringResource(R.string.hero_portrait, hero.name),
                 accentColor = roleAccentColor(hero.role),
                 modifier = Modifier.fillMaxSize(),
             )
@@ -284,7 +285,7 @@ private fun HeroGridCard(
                     )
                     if (hero.role != HeroRole.ALL) {
                         Text(
-                            text = hero.role.label,
+                            text = hero.role.localizedLabel(),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF94A3B8),
                             maxLines = 1,
@@ -309,12 +310,12 @@ private fun HeroGridCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Active script injected",
+                            contentDescription = stringResource(R.string.active_script_injected),
                             tint = Color.White,
                             modifier = Modifier.size(11.dp),
                         )
                         Text(
-                            text = "Active",
+                            text = stringResource(R.string.active),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,

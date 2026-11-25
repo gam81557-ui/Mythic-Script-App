@@ -35,14 +35,20 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.ScriptLifecycleState
+import com.example.localization.LocaleManager
+import com.example.localization.localizedLabel
+import com.example.localization.localizedShortLabel
 import com.example.shizuku.ShizukuConnectionState
 import com.example.ui.theme.LocalSemanticColors
 
@@ -56,7 +62,11 @@ fun CompanionTopAppBar(
     onShizukuStatusClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onShowDisclaimerClick: () -> Unit,
+    onToggleLanguage: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val isBurmese = LocaleManager.isBurmese(context)
+
     CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -83,7 +93,7 @@ fun CompanionTopAppBar(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Info,
-                        contentDescription = "Script safety notice",
+                        contentDescription = stringResource(R.string.cd_script_safety_notice),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
@@ -107,6 +117,10 @@ fun CompanionTopAppBar(
             }
         },
         actions = {
+            LanguageToggle(
+                isBurmese = isBurmese,
+                onToggleLanguage = onToggleLanguage,
+            )
             ShizukuStatusPill(
                 state = shizukuState,
                 onClick = onShizukuStatusClick,
@@ -127,6 +141,68 @@ fun CompanionTopAppBar(
 }
 
 @Composable
+private fun LanguageToggle(
+    isBurmese: Boolean,
+    onToggleLanguage: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val languageDescription = stringResource(R.string.cd_language_toggle)
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier
+            .padding(end = 6.dp)
+            .semantics { contentDescription = languageDescription }
+            .testTag("language_toggle"),
+    ) {
+        Row(
+            modifier = Modifier.padding(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            LanguageOption(
+                label = stringResource(R.string.language_english),
+                selected = !isBurmese,
+                onClick = { if (isBurmese) onToggleLanguage() },
+                testTag = "language_toggle_en",
+            )
+            LanguageOption(
+                label = stringResource(R.string.language_burmese),
+                selected = isBurmese,
+                onClick = { if (!isBurmese) onToggleLanguage() },
+                testTag = "language_toggle_mm",
+            )
+        }
+    }
+}
+
+@Composable
+private fun LanguageOption(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .testTag(testTag),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+        )
+    }
+}
+
+@Composable
 fun ShizukuStatusPill(
     state: ShizukuConnectionState,
     onClick: () -> Unit,
@@ -138,37 +214,37 @@ fun ShizukuStatusPill(
             semantic.activeContainer,
             semantic.active,
             Icons.Filled.CheckCircle,
-            "Shizuku UID ${state.uid}",
+            stringResource(R.string.shizuku_uid, state.uid),
         )
         ShizukuConnectionState.PermissionGranted -> Quad(
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
             Icons.Filled.Security,
-            "Binding…",
+            stringResource(R.string.shizuku_binding),
         )
         is ShizukuConnectionState.PermissionDenied -> Quad(
             semantic.warningContainer,
             semantic.warning,
             Icons.Filled.Warning,
-            "Grant Shizuku",
+            stringResource(R.string.shizuku_grant),
         )
         ShizukuConnectionState.NotRunning -> Quad(
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.onErrorContainer,
             Icons.Filled.LinkOff,
-            "Not Running",
+            stringResource(R.string.shizuku_not_running),
         )
         ShizukuConnectionState.NotInstalled -> Quad(
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.onErrorContainer,
             Icons.Filled.Error,
-            "No Shizuku",
+            stringResource(R.string.shizuku_no_shizuku),
         )
         is ShizukuConnectionState.ServiceDisconnected -> Quad(
             semantic.warningContainer,
             semantic.warning,
             Icons.Filled.LinkOff,
-            "Reconnect",
+            stringResource(R.string.shizuku_reconnect),
         )
     }
 
@@ -187,7 +263,7 @@ fun ShizukuStatusPill(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = "Shizuku connection status: $shortText",
+                contentDescription = stringResource(R.string.cd_shizuku_status, shortText),
                 tint = fgColor,
                 modifier = Modifier.size(14.dp),
             )
@@ -249,7 +325,7 @@ fun DisclaimerWarningBanner(
                             onClick = onLearnMore,
                             modifier = Modifier.testTag("disclaimer_details_button"),
                         ) {
-                            Text("Risk & Backup Rules")
+                            Text(stringResource(R.string.risk_backup_rules))
                         }
                     }
                 }
@@ -261,7 +337,7 @@ fun DisclaimerWarningBanner(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Dismiss safety warning banner",
+                        contentDescription = stringResource(R.string.cd_dismiss_safety_banner),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -306,14 +382,20 @@ fun RemoteMaintenanceBanner(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (activeConfig?.maintenanceMode == true) "Remote Maintenance Active" else "Injection Disabled Remotely",
+                        text = stringResource(
+                            if (activeConfig?.maintenanceMode == true) {
+                                R.string.remote_maintenance_active
+                            } else {
+                                R.string.injection_disabled_remotely
+                            }
+                        ),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                     Text(
-                        text = activeConfig?.maintenanceMessage?.ifBlank {
-                            "New injections are paused via remote config. Restore Original remains available."
-                        } ?: "",
+                        text = activeConfig?.maintenanceMessage
+                            ?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.maintenance_paused_message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -322,7 +404,7 @@ fun RemoteMaintenanceBanner(
                     onClick = onRetry,
                     modifier = Modifier.testTag("retry_remote_config_banner_button"),
                 ) {
-                    Text("Refresh")
+                    Text(stringResource(R.string.action_refresh))
                 }
             }
         }
@@ -361,7 +443,7 @@ fun ScriptLifecycleChip(
         modifier = modifier,
     ) {
         Text(
-            text = state.displayLabel(),
+            text = state.localizedLabel(),
             style = MaterialTheme.typography.labelMedium,
             color = fg,
             fontWeight = FontWeight.SemiBold,
@@ -391,15 +473,15 @@ fun DisclaimerDetailsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "1. Unofficial Asset Scripts: Skin scripts swap client-side visual/audio bundles under /Android/data/. They are not endorsed by Moonton.",
+                    text = stringResource(R.string.disclaimer_paragraph_1),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "2. File Integrity & Patch Resets: Official game integrity checks or major patches may overwrite modified assets. Use Re-Inject or Restore Original anytime.",
+                    text = stringResource(R.string.disclaimer_paragraph_2),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = "3. Account Risk: Using third-party file modifications carries potential account penalty risks. Original game files are always backed up automatically before overwriting.",
+                    text = stringResource(R.string.disclaimer_paragraph_3),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -409,7 +491,7 @@ fun DisclaimerDetailsDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("close_disclaimer_dialog_button"),
             ) {
-                Text("Understood")
+                Text(stringResource(R.string.action_understood))
             }
         },
     )
@@ -432,15 +514,14 @@ fun MaintenanceAlertDialog(
         },
         title = {
             Text(
-                text = "Maintenance Mode",
+                text = stringResource(R.string.maintenance_mode),
                 modifier = Modifier.testTag("maintenance_dialog_title"),
             )
         },
         text = {
             Text(
-                text = message.ifBlank {
-                    "Skin injection and remote downloads are temporarily unavailable for maintenance."
-                },
+                text = message.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.maintenance_default_message),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag("maintenance_dialog_message"),
             )
@@ -450,7 +531,7 @@ fun MaintenanceAlertDialog(
                 onClick = onRetry,
                 modifier = Modifier.testTag("maintenance_retry_button"),
             ) {
-                Text("Retry")
+                Text(stringResource(R.string.action_retry))
             }
         },
         dismissButton = {
@@ -458,7 +539,7 @@ fun MaintenanceAlertDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("maintenance_dismiss_button"),
             ) {
-                Text("Restore Only")
+                Text(stringResource(R.string.action_restore_only))
             }
         },
     )

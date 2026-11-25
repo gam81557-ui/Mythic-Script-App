@@ -16,8 +16,8 @@ android {
     applicationId = "com.mythic.script"
     minSdk = 24
     targetSdk = 36
-    versionCode = 327
-    versionName = "3.2.7"
+    versionCode = 328
+    versionName = "3.2.8"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

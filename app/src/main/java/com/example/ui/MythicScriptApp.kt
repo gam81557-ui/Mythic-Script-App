@@ -24,8 +24,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.ui.components.CompanionTopAppBar
 import com.example.ui.components.ConfirmClearBackupDialog
 import com.example.ui.components.DisclaimerDetailsDialog
@@ -40,6 +42,7 @@ import com.example.ui.components.RemoteMaintenanceBanner
 @Composable
 fun MythicScriptApp(
     viewModel: CompanionViewModel,
+    onToggleLanguage: () -> Unit = {},
 ) {
     val appContext = LocalContext.current.applicationContext
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -95,6 +98,7 @@ fun MythicScriptApp(
                     onShizukuStatusClick = { viewModel.setDiagnosticsSheetVisible(true) },
                     onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
                     onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
+                    onToggleLanguage = onToggleLanguage,
                 )
             },
         ) { innerPadding ->
@@ -262,7 +266,7 @@ fun MythicScriptApp(
 
     if (showClearBackupConfirm) {
         ConfirmClearBackupDialog(
-            skinName = uiState.selectedScript?.skinName ?: "Selected Script",
+            skinName = uiState.selectedScript?.skinName ?: stringResource(R.string.msg_selected_script),
             onConfirm = {
                 showClearBackupConfirm = false
                 viewModel.clearSelectedBackup()
