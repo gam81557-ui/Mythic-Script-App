@@ -85,18 +85,44 @@ class RemoteConfigManager(
             ?: root.optJSONObject("settings")
 
         // 1. Check root control flags first.
+        val configSources = listOfNotNull(root, nestedConfig)
         val maintenanceMode = readBooleanAny(
-            sources = listOfNotNull(root, nestedConfig),
+            sources = configSources,
             keys = MAINTENANCE_KEYS,
             defaultValue = false,
         )
         val maintenanceMessage = readStringAny(
-            sources = listOfNotNull(root, nestedConfig),
+            sources = configSources,
             keys = MAINTENANCE_MSG_KEYS,
-            defaultValue = if (maintenanceMode) DEFAULT_MAINTENANCE_MESSAGE else "",
+            defaultValue = "",
+        )
+        val maintenanceTitle = readStringAny(
+            sources = configSources,
+            keys = MAINTENANCE_TITLE_KEYS,
+            defaultValue = "",
+        )
+        val showNotice = readBooleanAny(
+            sources = configSources,
+            keys = SHOW_NOTICE_KEYS,
+            defaultValue = false,
+        )
+        val noticeId = readStringAny(
+            sources = configSources,
+            keys = NOTICE_ID_KEYS,
+            defaultValue = "",
+        )
+        val noticeTitle = readStringAny(
+            sources = configSources,
+            keys = NOTICE_TITLE_KEYS,
+            defaultValue = "",
+        )
+        val noticeMessage = readStringAny(
+            sources = configSources,
+            keys = NOTICE_MESSAGE_KEYS,
+            defaultValue = "",
         )
         val injectionEnabled = readBooleanAny(
-            sources = listOfNotNull(root, nestedConfig),
+            sources = configSources,
             keys = INJECTION_ENABLED_KEYS,
             defaultValue = true,
         )
@@ -166,12 +192,22 @@ class RemoteConfigManager(
             heroPortraits = discoveredPortraits,
             heroFallbackPortraits = discoveredFallbackPortraits,
             requireAdForDownload = requireAdForDownload,
+            showNotice = showNotice,
+            noticeId = noticeId,
+            noticeTitle = noticeTitle,
+            noticeMessage = noticeMessage,
+            maintenanceTitle = maintenanceTitle,
         )
     }
 
     private fun parseArrayRoot(array: JSONArray, fetchedAtMillis: Long): RemoteConfig {
         var maintenanceMode = false
         var maintenanceMessage = ""
+        var maintenanceTitle = ""
+        var showNotice = false
+        var noticeId = ""
+        var noticeTitle = ""
+        var noticeMessage = ""
         var skinsUnlocked: Boolean? = null
         var injectionEnabled: Boolean? = null
         var configVersion = "1.0"
@@ -189,6 +225,21 @@ class RemoteConfigManager(
             }
             if (hasAnyKey(item, MAINTENANCE_MSG_KEYS)) {
                 maintenanceMessage = readStringAny(listOf(item), MAINTENANCE_MSG_KEYS, maintenanceMessage)
+            }
+            if (hasAnyKey(item, MAINTENANCE_TITLE_KEYS)) {
+                maintenanceTitle = readStringAny(listOf(item), MAINTENANCE_TITLE_KEYS, maintenanceTitle)
+            }
+            if (hasAnyKey(item, SHOW_NOTICE_KEYS)) {
+                showNotice = readBooleanAny(listOf(item), SHOW_NOTICE_KEYS, showNotice)
+            }
+            if (hasAnyKey(item, NOTICE_ID_KEYS)) {
+                noticeId = readStringAny(listOf(item), NOTICE_ID_KEYS, noticeId)
+            }
+            if (hasAnyKey(item, NOTICE_TITLE_KEYS)) {
+                noticeTitle = readStringAny(listOf(item), NOTICE_TITLE_KEYS, noticeTitle)
+            }
+            if (hasAnyKey(item, NOTICE_MESSAGE_KEYS)) {
+                noticeMessage = readStringAny(listOf(item), NOTICE_MESSAGE_KEYS, noticeMessage)
             }
             if (hasAnyKey(item, GLOBAL_UNLOCK_KEYS)) {
                 skinsUnlocked = readBooleanAny(listOf(item), GLOBAL_UNLOCK_KEYS, skinsUnlocked ?: true)
@@ -216,13 +267,9 @@ class RemoteConfigManager(
         } else {
             true
         }
-        val resolvedMessage = maintenanceMessage.ifBlank {
-            if (maintenanceMode) DEFAULT_MAINTENANCE_MESSAGE else ""
-        }
-
         return RemoteConfig(
             maintenanceMode = maintenanceMode,
-            maintenanceMessage = resolvedMessage,
+            maintenanceMessage = maintenanceMessage,
             skinsUnlocked = resolvedUnlock,
             injectionEnabled = injectionEnabled ?: true,
             configVersion = configVersion,
@@ -238,6 +285,11 @@ class RemoteConfigManager(
                 sources = emptyList(),
                 flags = featureFlags,
             ),
+            showNotice = showNotice,
+            noticeId = noticeId,
+            noticeTitle = noticeTitle,
+            noticeMessage = noticeMessage,
+            maintenanceTitle = maintenanceTitle,
         )
     }
 
@@ -595,8 +647,6 @@ class RemoteConfigManager(
         const val READ_TIMEOUT_MS = 20_000
         private const val MAX_RESPONSE_CHARS = 8_000_000
         private const val MAX_ERROR_CHARS = 16_000
-        private const val DEFAULT_MAINTENANCE_MESSAGE =
-            "Script injection is temporarily paused for maintenance."
 
         private val RESERVED_CONFIG_CONTAINER_KEYS = setOf(
             "config",
@@ -619,9 +669,57 @@ class RemoteConfigManager(
             "maintenanceMessage",
             "maintenance_message",
             "maintenanceNote",
+            "maintenance_note",
+            "maintenanceReason",
+            "maintenance_reason",
             "message",
-            "notice",
             "reason",
+        )
+        private val MAINTENANCE_TITLE_KEYS = listOf(
+            "maintenanceTitle",
+            "maintenance_title",
+            "maintenanceHeader",
+            "maintenance_header",
+        )
+        private val SHOW_NOTICE_KEYS = listOf(
+            "show_notice",
+            "showNotice",
+            "show_notification",
+            "showNotification",
+            "notice_enabled",
+            "noticeEnabled",
+        )
+        private val NOTICE_ID_KEYS = listOf(
+            "notice_id",
+            "noticeId",
+            "notice_version",
+            "noticeVersion",
+            "update_id",
+            "updateId",
+            "content_id",
+            "contentId",
+        )
+        private val NOTICE_TITLE_KEYS = listOf(
+            "title",
+            "update_title",
+            "updateTitle",
+            "notice_title",
+            "noticeTitle",
+            "notification_title",
+            "notificationTitle",
+        )
+        private val NOTICE_MESSAGE_KEYS = listOf(
+            "message",
+            "release_note",
+            "release_notes",
+            "releaseNote",
+            "releaseNotes",
+            "description",
+            "notice_message",
+            "noticeMessage",
+            "update_message",
+            "updateMessage",
+            "notes",
         )
         private val GLOBAL_UNLOCK_KEYS = listOf(
             "unlockSkins",

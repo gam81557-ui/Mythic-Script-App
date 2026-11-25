@@ -29,6 +29,7 @@ class CompanionRepository(
     val targetPackageFlow: Flow<String> = preferences.targetPackageFlow
     val disclaimerDismissedFlow: Flow<Boolean> = preferences.disclaimerDismissedFlow
     val selectedHeroIdFlow: Flow<String?> = preferences.selectedHeroIdFlow
+    val noticeDismissedKeyFlow: Flow<String?> = preferences.noticeDismissedKeyFlow
 
     suspend fun initializeCatalogIfNeeded() {
         val templates = HeroCatalogProvider.catalogScripts
@@ -240,4 +241,6 @@ class CompanionRepository(
         preferences.setDisclaimerDismissed(dismissed)
 
     suspend fun setSelectedHeroId(heroId: String) = preferences.setSelectedHeroId(heroId)
+
+    suspend fun setNoticeDismissedKey(key: String?) = preferences.setNoticeDismissedKey(key)
 }

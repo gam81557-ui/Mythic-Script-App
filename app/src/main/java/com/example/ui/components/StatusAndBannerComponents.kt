@@ -2,16 +2,25 @@ package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -23,6 +32,8 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,14 +47,21 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.ScriptLifecycleState
@@ -501,51 +519,164 @@ fun DisclaimerDetailsDialog(
 }
 
 @Composable
-fun MaintenanceAlertDialog(
+fun NotificationDialog(
+    title: String,
     message: String,
-    onRetry: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Error,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-            )
-        },
-        title = {
-            Text(
-                text = stringResource(R.string.maintenance_mode),
-                modifier = Modifier.testTag("maintenance_dialog_title"),
-            )
-        },
-        text = {
-            Text(
-                text = message.takeIf { it.isNotBlank() }
-                    ?: stringResource(R.string.maintenance_default_message),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.testTag("maintenance_dialog_message"),
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onRetry,
-                modifier = Modifier.testTag("maintenance_retry_button"),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        NotificationDialogContent(title = title, message = message, onDismiss = onDismiss)
+    }
+}
+
+@Composable
+internal fun NotificationDialogContent(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+) {
+    val cardShape = RoundedCornerShape(30.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .testTag("remote_notice_dialog_root"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 420.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 30.dp)
+                    .shadow(elevation = 28.dp, shape = cardShape, clip = false)
+                    .clip(cardShape)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFFF8F8FA).copy(alpha = 0.95f),
+                                Color(0xFFE7E8ED).copy(alpha = 0.90f),
+                            )
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.78f), cardShape)
+                    .padding(start = 26.dp, end = 26.dp, top = 48.dp, bottom = 24.dp)
+                    .testTag("remote_notice_dialog"),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.action_retry))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF303138),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("notice_dialog_title"),
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF55575F),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp)
+                            .testTag("notice_dialog_message"),
+                    )
+                }
+                Spacer(modifier = Modifier.height(22.dp))
+                Row(
+                    modifier = Modifier
+                        .widthIn(max = 280.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NoticePillButton(
+                        text = stringResource(R.string.action_got_it),
+                        color = Color(0xFF00B7C7),
+                        testTag = "notice_got_it_button",
+                        modifier = Modifier.weight(1f),
+                        onClick = onDismiss,
+                    )
+                    NoticePillButton(
+                        text = stringResource(R.string.action_close),
+                        color = Color(0xFFFE1B1B),
+                        testTag = "notice_close_button",
+                        modifier = Modifier.weight(1f),
+                        onClick = onDismiss,
+                    )
+                }
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag("maintenance_dismiss_button"),
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .size(64.dp)
+                    .shadow(elevation = 14.dp, shape = CircleShape, clip = false)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF7F7F9))
+                    .border(1.dp, Color.White, CircleShape)
+                    .testTag("notice_info_badge"),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(stringResource(R.string.action_restore_only))
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = stringResource(R.string.cd_notice_info),
+                    tint = Color(0xFF3B3C42),
+                    modifier = Modifier.size(32.dp),
+                )
             }
-        },
-    )
+        }
+    }
+}
+
+@Composable
+private fun NoticePillButton(
+    text: String,
+    color: Color,
+    testTag: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .height(48.dp)
+            .testTag(testTag),
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color,
+            contentColor = Color.White,
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 0.dp,
+        ),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

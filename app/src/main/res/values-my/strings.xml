@@ -176,6 +176,10 @@
     <string name="action_understood">နားလည်ပါပြီ</string>
     <string name="maintenance_mode">ပြုပြင်ထိန်းသိမ်းမှု မုဒ်</string>
     <string name="maintenance_default_message">ပြုပြင်ထိန်းသိမ်းမှုကြောင့် စကင်ထည့်သွင်းမှုနှင့် အဝေးမှဒေါင်းလုဒ်များ ယာယီမရနိုင်ပါ။</string>
+    <string name="notification_title">အသိပေးချက်</string>
+    <string name="notification_default_message">နောက်ဆုံးအပ်ဒိတ်အချက်အလက်များကို စစ်ဆေးပါ။</string>
+    <string name="action_got_it">နားလည်ပါပြီ</string>
+    <string name="cd_notice_info">အသိပေးချက် အချက်အလက်</string>
     <string name="action_restore_only">မူရင်းပြန်ထားရန်သာ</string>
 
     <string name="msg_config_synced">ဖွဲ့စည်းမှု ထပ်တူပြုပြီးပါပြီ။</string>

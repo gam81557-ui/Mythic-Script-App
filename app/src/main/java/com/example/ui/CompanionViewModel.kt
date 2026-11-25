@@ -93,8 +93,9 @@ data class CompanionUiState(
     val showDisclaimerDialog: Boolean = false,
     val totalBackupBytes: Long = 0L,
     val remoteConfigState: RemoteConfigState = RemoteConfigState.Loading,
-    val showMaintenanceDialog: Boolean = false,
-    val maintenanceMessage: String = "",
+    val showNoticeDialog: Boolean = false,
+    val noticeTitle: String = "",
+    val noticeMessage: String = "",
     val snackbarMessage: String? = null,
 )
 
@@ -187,6 +188,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     private val showShizukuGuideDialogFlow = MutableStateFlow(false)
     private val showDisclaimerDialogFlow = MutableStateFlow(false)
     private val maintenanceDismissedFetchMillisFlow = MutableStateFlow<Long?>(null)
+    private val noticeDismissedKeyFlow = MutableStateFlow<String?>(null)
     private val snackbarMessageFlow = MutableStateFlow<String?>(null)
     private val hideUnavailableSkinsFlow = MutableStateFlow(false)
 
@@ -240,7 +242,8 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         modalAndTransientFlow,
         persistedDataFlow,
         remoteConfigStateFlow,
-    ) { filterState, modalState, persisted, remoteConfigState ->
+        noticeDismissedKeyFlow,
+    ) { filterState, modalState, persisted, remoteConfigState, dismissedNoticeKey ->
         val activeRemoteConfig = when (remoteConfigState) {
             is RemoteConfigState.Ready -> remoteConfigState.config
             is RemoteConfigState.Failed -> remoteConfigState.lastKnownConfig
@@ -400,9 +403,33 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val selectedScript = visibleScripts.find { it.scriptId == effectiveSelectedScriptId }
         val totalBackupBytes = persisted.backups.sumOf { it.byteSize }
         val targetInstalled = isPackageInstalled(persisted.targetPackage)
-        val showMaintenanceDialog = activeRemoteConfig != null &&
-            activeRemoteConfig.maintenanceMode &&
-            modalState.maintenanceDismissedFetchMillis != activeRemoteConfig.fetchedAtMillis
+        val maintenanceActive = activeRemoteConfig?.maintenanceMode == true
+        val noticeActive = activeRemoteConfig?.showNotice == true
+        val showNoticeDialog = when {
+            activeRemoteConfig == null -> false
+            maintenanceActive -> {
+                modalState.maintenanceDismissedFetchMillis != activeRemoteConfig.fetchedAtMillis
+            }
+            noticeActive -> dismissedNoticeKey != activeRemoteConfig.notificationContentKey
+            else -> false
+        }
+        val remoteNoticeTitle = when {
+            activeRemoteConfig == null -> null
+            maintenanceActive -> activeRemoteConfig.maintenanceTitle.takeIf { it.isNotBlank() }
+                ?: activeRemoteConfig.noticeTitle.takeIf { it.isNotBlank() }
+            else -> activeRemoteConfig.noticeTitle.takeIf { it.isNotBlank() }
+        }
+        val noticeTitle = remoteNoticeTitle ?: tr(
+            if (maintenanceActive) R.string.maintenance_mode else R.string.notification_title
+        )
+        val noticeMessage = when {
+            activeRemoteConfig == null -> ""
+            maintenanceActive -> activeRemoteConfig.maintenanceMessage.takeIf { it.isNotBlank() }
+                ?: activeRemoteConfig.noticeMessage.takeIf { it.isNotBlank() }
+                ?: tr(R.string.maintenance_default_message)
+            else -> activeRemoteConfig.noticeMessage.takeIf { it.isNotBlank() }
+                ?: tr(R.string.notification_default_message)
+        }
 
         CompanionUiState(
             allHeroes = mergedHeroes,
@@ -429,8 +456,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             showDisclaimerDialog = modalState.showDisclaimerDialog,
             totalBackupBytes = totalBackupBytes,
             remoteConfigState = remoteConfigState,
-            showMaintenanceDialog = showMaintenanceDialog,
-            maintenanceMessage = activeRemoteConfig?.maintenanceMessage.orEmpty(),
+            showNoticeDialog = showNoticeDialog,
+            noticeTitle = noticeTitle,
+            noticeMessage = noticeMessage,
             snackbarMessage = modalState.snackbarMessage,
         )
     }.stateIn(
@@ -456,6 +484,21 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     }
                 }
         }
+        launchSafely(R.string.msg_status_failed) {
+            val savedDismissedKey = repository.noticeDismissedKeyFlow
+                .catch { error ->
+                    Log.e("CompanionViewModel", "Unable to load dismissed notice", error)
+                    emit(null)
+                }
+                .first()
+            if (savedDismissedKey != null) {
+                if (currentRemoteConfig()?.showNotice == false) {
+                    repository.setNoticeDismissedKey(null)
+                } else {
+                    noticeDismissedKeyFlow.value = savedDismissedKey
+                }
+            }
+        }
         refreshRemoteConfig()
     }
 
@@ -471,6 +514,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     if (!allowBackgroundRemoteSync) return@onSuccess
                     lastKnownRemoteConfig = config
                     remoteConfigStateFlow.value = RemoteConfigState.Ready(config)
+                    clearDismissedNoticeIfDisabled(config)
                     probeSelectedHeroLinks(heroId = selectedHeroIdFlow.value, remoteConfig = config)
                     if (showFeedbackToast) {
                         val status = tr(
@@ -505,6 +549,16 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         probeJob?.cancel()
         lastKnownRemoteConfig = config
         remoteConfigStateFlow.value = RemoteConfigState.Ready(config)
+        clearDismissedNoticeIfDisabled(config)
+    }
+
+    private fun clearDismissedNoticeIfDisabled(config: RemoteConfig) {
+        if (!config.showNotice && noticeDismissedKeyFlow.value != null) {
+            noticeDismissedKeyFlow.value = null
+            launchSafely(R.string.msg_status_failed) {
+                repository.setNoticeDismissedKey(null)
+            }
+        }
     }
 
     internal fun markScriptUnavailableForTest(
@@ -535,13 +589,18 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         hideUnavailableSkinsFlow.value = hide
     }
 
-    fun dismissMaintenanceDialog() {
-        val currentConfig = when (val rc = remoteConfigStateFlow.value) {
-            is RemoteConfigState.Ready -> rc.config
-            is RemoteConfigState.Failed -> rc.lastKnownConfig
-            RemoteConfigState.Loading -> null
+    fun dismissNoticeDialog() {
+        val config = currentRemoteConfig() ?: return
+        if (config.maintenanceMode) {
+            maintenanceDismissedFetchMillisFlow.value = config.fetchedAtMillis
         }
-        maintenanceDismissedFetchMillisFlow.value = currentConfig?.fetchedAtMillis
+        if (config.showNotice) {
+            val dismissedKey = config.notificationContentKey
+            noticeDismissedKeyFlow.value = dismissedKey
+            launchSafely(R.string.msg_status_failed) {
+                repository.setNoticeDismissedKey(dismissedKey)
+            }
+        }
     }
 
     fun downloadSkinScript(script: SkinScriptItem) {

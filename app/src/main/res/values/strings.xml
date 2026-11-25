@@ -176,6 +176,10 @@
     <string name="action_understood">Understood</string>
     <string name="maintenance_mode">Maintenance Mode</string>
     <string name="maintenance_default_message">Skin injection and remote downloads are temporarily unavailable for maintenance.</string>
+    <string name="notification_title">Notification</string>
+    <string name="notification_default_message">Please review the latest update.</string>
+    <string name="action_got_it">Got it</string>
+    <string name="cd_notice_info">Notification information</string>
     <string name="action_restore_only">Restore Only</string>
 
     <string name="msg_config_synced">Config synced</string>

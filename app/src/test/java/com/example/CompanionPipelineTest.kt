@@ -200,10 +200,10 @@ class CompanionPipelineTest {
 
         vm.applyRemoteConfigForTest(parsed)
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodes(hasTestTag("maintenance_dialog_title")).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(hasTestTag("notice_dialog_title")).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithTag("maintenance_dialog_message").assertIsDisplayed()
-        composeRule.onNodeWithTag("maintenance_dismiss_button").performClick()
+        composeRule.onNodeWithTag("notice_dialog_message").assertIsDisplayed()
+        composeRule.onNodeWithTag("notice_got_it_button").performClick()
         composeRule.waitForIdle()
 
         // Filter Show All & Fighter to verify HeroRoleMapper discovers Dyrroth

@@ -32,6 +32,10 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_SELECTED_HERO_ID]
     }
 
+    val noticeDismissedKeyFlow: Flow<String?> = safeData.map { prefs ->
+        prefs[KEY_NOTICE_DISMISSED_KEY]
+    }
+
     suspend fun setTargetPackage(packageName: String): Result<String> {
         val trimmed = packageName.trim()
         if (!isValidPackageName(trimmed)) {
@@ -65,6 +69,18 @@ class AppPreferences(private val context: Context) {
         }.onFailure { Log.e("AppPreferences", "Unable to save selected hero", it) }
     }
 
+    suspend fun setNoticeDismissedKey(key: String?) {
+        runCatching {
+            context.companionDataStore.edit { prefs ->
+                if (key == null) {
+                    prefs.remove(KEY_NOTICE_DISMISSED_KEY)
+                } else {
+                    prefs[KEY_NOTICE_DISMISSED_KEY] = key
+                }
+            }
+        }.onFailure { Log.e("AppPreferences", "Unable to save dismissed notice", it) }
+    }
+
     companion object {
         const val DEFAULT_TARGET_PACKAGE = "com.mobile.legends"
         private val PACKAGE_REGEX = Regex("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$")
@@ -72,6 +88,7 @@ class AppPreferences(private val context: Context) {
         private val KEY_TARGET_PACKAGE = stringPreferencesKey("target_package")
         private val KEY_DISCLAIMER_DISMISSED = booleanPreferencesKey("disclaimer_dismissed")
         private val KEY_SELECTED_HERO_ID = stringPreferencesKey("selected_hero_id")
+        private val KEY_NOTICE_DISMISSED_KEY = stringPreferencesKey("notice_dismissed_key")
 
         fun isValidPackageName(pkg: String): Boolean {
             return pkg.length in 5..120 && PACKAGE_REGEX.matches(pkg)

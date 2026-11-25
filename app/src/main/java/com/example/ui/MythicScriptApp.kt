@@ -35,7 +35,7 @@ import com.example.ui.components.DisclaimerWarningBanner
 import com.example.ui.components.HeroDetailPane
 import com.example.ui.components.HeroRosterPane
 import com.example.ui.components.ImportZipConfirmationSheet
-import com.example.ui.components.MaintenanceAlertDialog
+import com.example.ui.components.NotificationDialog
 import com.example.ui.components.PackageAndDiagnosticsSheet
 import com.example.ui.components.RemoteMaintenanceBanner
 import com.example.ui.components.ShizukuGuideDialog
@@ -286,11 +286,11 @@ fun MythicScriptApp(
         )
     }
 
-    if (uiState.showMaintenanceDialog) {
-        MaintenanceAlertDialog(
-            message = uiState.maintenanceMessage,
-            onRetry = { viewModel.refreshRemoteConfig(showFeedbackToast = true) },
-            onDismiss = { viewModel.dismissMaintenanceDialog() },
+    if (uiState.showNoticeDialog) {
+        NotificationDialog(
+            title = uiState.noticeTitle,
+            message = uiState.noticeMessage,
+            onDismiss = { viewModel.dismissNoticeDialog() },
         )
     }
 }

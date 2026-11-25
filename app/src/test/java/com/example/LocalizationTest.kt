@@ -49,6 +49,8 @@ class LocalizationTest {
                 burmese.getString(R.string.action_watch_tutorial),
             )
             assertEquals("Credit: Kazeno", burmese.getString(R.string.shizuku_tutorial_credit))
+            assertEquals("အသိပေးချက်", burmese.getString(R.string.notification_title))
+            assertEquals("နားလည်ပါပြီ", burmese.getString(R.string.action_got_it))
             assertNotEquals(
                 app.getString(R.string.shizuku_guide_title),
                 burmese.getString(R.string.shizuku_guide_title),
@@ -60,6 +62,8 @@ class LocalizationTest {
         assertEquals("Start Shizuku", app.getString(R.string.shizuku_guide_title))
         assertEquals("Watch Tutorial", app.getString(R.string.action_watch_tutorial))
         assertEquals("Credit: Kazeno", app.getString(R.string.shizuku_tutorial_credit))
+        assertEquals("Notification", app.getString(R.string.notification_title))
+        assertEquals("Got it", app.getString(R.string.action_got_it))
     }
 
     @Test
