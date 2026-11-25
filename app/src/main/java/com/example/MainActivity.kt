@@ -170,7 +170,18 @@ private fun UnityBanner(activity: Activity) {
         if (loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS) return
         loadAttempts++
         UnityAdManager.onBannerLoading()
-        banner.load()
+        runCatching { banner.load() }
+            .onFailure { error ->
+                UnityAdManager.onBannerFailed("LOAD_EXCEPTION", error.message.orEmpty())
+                if (loadAttempts < BANNER_MAX_LOAD_ATTEMPTS && banner.parent != null) {
+                    banner.postDelayed(
+                        {
+                            if (banner.parent != null) requestBannerLoad()
+                        },
+                        BANNER_RETRY_DELAY_MS,
+                    )
+                }
+            }
     }
 
     DisposableEffect(activity) {
@@ -207,8 +218,8 @@ private fun UnityBanner(activity: Activity) {
         })
 
         onDispose {
-            banner.setListener(null)
-            banner.destroy()
+            runCatching { banner.setListener(null) }
+            runCatching { banner.destroy() }
         }
     }
 

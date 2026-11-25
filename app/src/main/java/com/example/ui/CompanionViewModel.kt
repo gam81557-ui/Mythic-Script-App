@@ -34,6 +34,7 @@ import com.example.domain.model.SkinScriptItem
 import com.example.domain.model.StagedBundlePreview
 import com.example.shizuku.ShizukuBridgeManager
 import com.example.shizuku.ShizukuConnectionState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -41,6 +42,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -50,13 +52,27 @@ import kotlinx.coroutines.sync.withPermit
 import java.net.HttpURLConnection
 import java.util.concurrent.ConcurrentHashMap
 
+private val DefaultHero = HeroProfile(
+    id = "",
+    name = "",
+    aliases = emptyList(),
+    title = "",
+    role = HeroRole.ALL,
+    specialty = "",
+    lane = "",
+    attributes = HeroAttributes(0, 0, 0, 0),
+    skills = emptyList(),
+    combos = emptyList(),
+    companionNotes = "",
+)
+
 data class CompanionUiState(
     val allHeroes: List<HeroProfile> = HeroCatalogProvider.heroes,
     val filteredHeroes: List<HeroProfile> = HeroCatalogProvider.heroes,
     val roleFilter: HeroRole = HeroRole.ALL,
     val searchQuery: String = "",
-    val selectedHeroId: String = HeroCatalogProvider.heroes.first().id,
-    val selectedHero: HeroProfile = HeroCatalogProvider.heroes.first(),
+    val selectedHeroId: String = HeroCatalogProvider.heroes.firstOrNull()?.id.orEmpty(),
+    val selectedHero: HeroProfile = HeroCatalogProvider.heroes.firstOrNull() ?: DefaultHero,
     val activeDetailTab: HeroDetailTab = HeroDetailTab.SCRIPTS,
     val scriptsForSelectedHero: List<SkinScriptItem> = emptyList(),
     val selectedScriptId: String? = null,
@@ -103,6 +119,19 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     private fun tr(resId: Int, vararg args: Any): String =
         LocaleManager.localizedContext(getApplication()).getString(resId, *args)
 
+    private fun launchSafely(fallbackRes: Int, block: suspend () -> Unit): Job =
+        viewModelScope.launch {
+            try {
+                block()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                Log.e("CompanionViewModel", "Unhandled coroutine failure", error)
+                snackbarMessageFlow.value = runCatching { tr(fallbackRes) }
+                    .getOrDefault("Operation failed")
+            }
+        }
+
     private fun shizukuLabel(state: ShizukuConnectionState): String =
         state.localizedShortLabel(LocaleManager.localizedContext(getApplication()))
 
@@ -141,7 +170,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val roleFilterFlow = MutableStateFlow(HeroRole.ALL)
     private val searchQueryFlow = MutableStateFlow("")
-    private val selectedHeroIdFlow = MutableStateFlow(HeroCatalogProvider.heroes.first().id)
+    private val selectedHeroIdFlow = MutableStateFlow(
+        HeroCatalogProvider.heroes.firstOrNull()?.id.orEmpty()
+    )
     private val selectedScriptByHeroFlow = MutableStateFlow<Map<String, String>>(emptyMap())
     private val activeDetailTabFlow = MutableStateFlow(HeroDetailTab.SCRIPTS)
     private val transientScriptStatesFlow = MutableStateFlow<Map<String, ScriptLifecycleState>>(emptyMap())
@@ -211,14 +242,15 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val mergedHeroes = buildMergedHeroList(
             localHeroes = repository.heroes,
             remoteConfig = activeRemoteConfig,
-        )
+        ).distinctBy { it.id }
 
         val filteredHeroes = mergedHeroes.filter { hero ->
             hero.matchesRole(filterState.roleFilter) && hero.matchesQuery(filterState.searchQuery)
         }
 
         val activeHero = mergedHeroes.find { it.id == filterState.selectedHeroId }
-            ?: mergedHeroes.first()
+            ?: mergedHeroes.firstOrNull()
+            ?: DefaultHero
 
         val backupsByScript = persisted.backups.groupBy { it.scriptId }
         val heroScriptsRaw = persisted.scripts.filter {
@@ -352,11 +384,11 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 }.thenBy { it.sortOrder }.thenBy { it.skinName.lowercase() }
             )
         val unavailableCountForHero = allMappedScripts.count { it.isUnavailable }
-        val visibleScripts = if (modalState.hideUnavailableSkins) {
+        val visibleScripts = (if (modalState.hideUnavailableSkins) {
             allMappedScripts.filterNot { it.isUnavailable }
         } else {
             allMappedScripts
-        }
+        }).distinctBy { it.scriptId }
         val selectedScript = visibleScripts.find { it.scriptId == effectiveSelectedScriptId }
         val totalBackupBytes = persisted.backups.sumOf { it.byteSize }
         val targetInstalled = isPackageInstalled(persisted.targetPackage)
@@ -400,15 +432,20 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         shizukuBridge.startListening()
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             repository.initializeCatalogIfNeeded()
         }
-        viewModelScope.launch {
-            repository.selectedHeroIdFlow.collect { savedHeroId ->
-                if (!savedHeroId.isNullOrBlank()) {
-                    selectedHeroIdFlow.value = savedHeroId
+        launchSafely(R.string.msg_status_failed) {
+            repository.selectedHeroIdFlow
+                .catch { error ->
+                    Log.e("CompanionViewModel", "Unable to observe selected hero", error)
+                    emit(null)
                 }
-            }
+                .collect { savedHeroId ->
+                    if (!savedHeroId.isNullOrBlank()) {
+                        selectedHeroIdFlow.value = savedHeroId
+                    }
+                }
         }
         refreshRemoteConfig()
     }
@@ -419,7 +456,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         }
         remoteFetchJob?.cancel()
         remoteConfigStateFlow.value = RemoteConfigState.Loading
-        remoteFetchJob = viewModelScope.launch {
+        remoteFetchJob = launchSafely(R.string.msg_unable_remote_config) {
             remoteConfigManager.fetchConfig()
                 .onSuccess { config ->
                     if (!allowBackgroundRemoteSync) return@onSuccess
@@ -465,7 +502,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         script: SkinScriptItem,
         httpCode: Int = HttpURLConnection.HTTP_NOT_FOUND,
     ) {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             markScriptUnavailableNowForTest(script, httpCode)
         }
     }
@@ -525,7 +562,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             "Download gate: requireAdForDownload=$requireAd, gateAttached=${gate != null}",
         )
         if (requireAd && gate != null) {
-            if (!gate(onProceed)) {
+            val accepted = runCatching { gate(onProceed) }.getOrElse { error ->
+                Log.e("CompanionViewModel", "Ad gate failed; continuing with download", error)
+                onProceed()
+                true
+            }
+            if (!accepted) {
                 snackbarMessageFlow.value = tr(R.string.msg_wait_for_ad)
             }
         } else {
@@ -542,7 +584,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         currentRemoteConfig()?.requireAdForDownload ?: true
 
     private fun startDownload(script: SkinScriptItem) {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_download_failed_generic) {
             transientScriptStatesFlow.value =
                 transientScriptStatesFlow.value + (script.scriptId to ScriptLifecycleState.Downloading(0.10f))
             val result = repository.downloadRemoteScriptBundle(script) { progress ->
@@ -641,7 +683,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun selectHero(heroId: String) {
         selectedHeroIdFlow.value = heroId
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             repository.setSelectedHeroId(heroId)
         }
         probeSelectedHeroLinks(heroId = heroId, remoteConfig = lastKnownRemoteConfig)
@@ -650,7 +692,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     private fun probeSelectedHeroLinks(heroId: String, remoteConfig: RemoteConfig?) {
         if (remoteConfig == null || !allowBackgroundRemoteSync) return
         probeJob?.cancel()
-        probeJob = viewModelScope.launch {
+        probeJob = launchSafely(R.string.msg_status_failed) {
             val heroName = uiState.value.allHeroes.find { it.id == heroId }?.name
                 ?: remoteConfig.availableHeroes.find {
                     it.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_') == heroId
@@ -658,7 +700,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 ?: heroId
             val remoteEntries = findRemoteSkinsForHero(remoteConfig, heroName)
                 .filter { it.downloadUrl.startsWith("http://", true) || it.downloadUrl.startsWith("https://", true) }
-            if (remoteEntries.isEmpty()) return@launch
+            if (remoteEntries.isEmpty()) return@launchSafely
 
             val existingById = repository.allScriptsFlow.first().associateBy { it.scriptId }
             val semaphore = Semaphore(4)
@@ -768,7 +810,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
-        viewModelScope.launch {
+        launchSafely(R.string.msg_injection_failed) {
             performInjectionForScript(script = script, fromAutoDownload = false)
         }
     }
@@ -777,24 +819,29 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         script: SkinScriptItem,
         fromAutoDownload: Boolean,
     ) {
-        val targetPkg = uiState.value.targetPackage
-        repository.ensureRemoteScriptPersisted(script)
-        val result = repository.injectScript(
-            scriptId = script.scriptId,
-            targetPackage = targetPkg,
-            onProgress = { state ->
-                transientScriptStatesFlow.value =
-                    transientScriptStatesFlow.value + (script.scriptId to state)
-            },
-        )
-        result.onSuccess {
-            transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-            snackbarMessageFlow.value = if (fromAutoDownload) {
-                tr(R.string.msg_downloaded_injected, script.skinName)
-            } else {
-                tr(R.string.msg_injected, script.skinName)
+        runCatching {
+            val targetPkg = uiState.value.targetPackage
+            repository.ensureRemoteScriptPersisted(script)
+            val result = repository.injectScript(
+                scriptId = script.scriptId,
+                targetPackage = targetPkg,
+                onProgress = { state ->
+                    transientScriptStatesFlow.value =
+                        transientScriptStatesFlow.value + (script.scriptId to state)
+                },
+            )
+            result.onSuccess {
+                transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
+                snackbarMessageFlow.value = if (fromAutoDownload) {
+                    tr(R.string.msg_downloaded_injected, script.skinName)
+                } else {
+                    tr(R.string.msg_injected, script.skinName)
+                }
+            }.onFailure { err ->
+                snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
             }
         }.onFailure { err ->
+            transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
             snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
         }
     }
@@ -810,7 +857,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
-        viewModelScope.launch {
+        launchSafely(R.string.msg_restore_failed) {
             val result = repository.restoreScript(
                 scriptId = script.scriptId,
                 targetPackage = targetPkg,
@@ -830,7 +877,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun clearSelectedBackup() {
         val script = uiState.value.selectedScript ?: return
-        viewModelScope.launch {
+        launchSafely(R.string.msg_clear_backup_failed) {
             repository.clearBackup(script.scriptId)
                 .onSuccess {
                     transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
@@ -845,15 +892,18 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun importZipFromUri(uri: Uri) {
         val fallbackHeroId = uiState.value.selectedHeroId
         isImportingZipFlow.value = true
-        viewModelScope.launch {
-            repository.importZipBundle(uri, fallbackHeroId)
-                .onSuccess { preview ->
-                    pendingImportPreviewFlow.value = preview
-                }
-                .onFailure { err ->
-                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_zip_inspect_failed)
-                }
-            isImportingZipFlow.value = false
+        launchSafely(R.string.msg_zip_inspect_failed) {
+            try {
+                repository.importZipBundle(uri, fallbackHeroId)
+                    .onSuccess { preview ->
+                        pendingImportPreviewFlow.value = preview
+                    }
+                    .onFailure { err ->
+                        snackbarMessageFlow.value = errorMessage(err, R.string.msg_zip_inspect_failed)
+                    }
+            } finally {
+                isImportingZipFlow.value = false
+            }
         }
     }
 
@@ -865,7 +915,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         notes: String,
     ) {
         val preview = pendingImportPreviewFlow.value ?: return
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             val saved = repository.saveImportedScript(
                 preview = preview,
                 heroId = heroId,
@@ -889,13 +939,13 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun cancelImportPreview() {
         val preview = pendingImportPreviewFlow.value ?: return
         pendingImportPreviewFlow.value = null
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             repository.cancelStagedPreview(preview)
         }
     }
 
     fun deleteCustomScript(script: SkinScriptItem) {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_delete_failed) {
             val entity = SkinScriptEntity(
                 scriptId = script.scriptId,
                 heroId = script.heroId,
@@ -919,7 +969,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun updateTargetPackage(newPackage: String) {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_invalid_package) {
             repository.setTargetPackage(newPackage)
                 .onSuccess { validPkg ->
                     snackbarMessageFlow.value = tr(R.string.msg_target_package_set, validPkg)
@@ -942,13 +992,13 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun dismissDisclaimerBanner() {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             repository.setDisclaimerDismissed(true)
         }
     }
 
     fun restoreDisclaimerBanner() {
-        viewModelScope.launch {
+        launchSafely(R.string.msg_status_failed) {
             repository.setDisclaimerDismissed(false)
         }
     }
@@ -1084,9 +1134,8 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         return mergedByKey.values.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
     }
 
-    private fun RemoteSkinEntry.scriptIdSafe(): String {
-        return id.trim().replace(Regex("[^a-zA-Z0-9._-]"), "_")
-    }
+    private fun RemoteSkinEntry.scriptIdSafe(): String =
+        ScriptArchiveManager.sanitizeFileSegment(id)
 
     private data class PersistedSnapshot(
         val scripts: List<SkinScriptEntity>,

@@ -98,13 +98,13 @@ object UnityAdManager {
         if (!_isInitialized.value) ensureInitialized(activity.applicationContext)
     }
 
-    fun isOnline(context: Context): Boolean {
+    fun isOnline(context: Context): Boolean = runCatching {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return true
-        val network = manager.activeNetwork ?: return false
-        val capabilities = manager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
+            ?: return@runCatching true
+        val network = manager.activeNetwork ?: return@runCatching false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return@runCatching false
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }.getOrDefault(true)
 
     fun preload(context: Context) {
         appContext = context.applicationContext
@@ -125,7 +125,8 @@ object UnityAdManager {
     fun showRewardedThenDownload(context: Context, onDownload: () -> Unit): Boolean {
         val activity = resolveActivity(context)
         if (activity == null) {
-            onDownload()
+            runCatching { onDownload() }
+                .onFailure { Log.e(TAG, "Download callback failed without an activity", it) }
             return true
         }
         if (showing || pendingDownload != null) return false
@@ -255,7 +256,8 @@ object UnityAdManager {
                 "ctx=${context.javaClass.name} sdkInit=${UnityAds.isInitialized} " +
                 "supported=${UnityAds.isSupported} version=${UnityAds.version}",
         )
-        UnityAds.debugMode = TEST_MODE
+        runCatching { UnityAds.debugMode = TEST_MODE }
+            .onFailure { Log.w(TAG, "Unable to set Unity debug mode: ${it.message}", it) }
         val listener = object : IUnityAdsInitializationListener {
             override fun onInitializationComplete() {
                 Log.i(
@@ -548,36 +550,51 @@ object UnityAdManager {
         updateDebug { it.copy(rewarded = "Rewarded: loading") }
         Log.i(TAG, "Loading rewarded ad $REWARDED_PLACEMENT")
 
-        UnityAds.load(REWARDED_PLACEMENT, object : IUnityAdsLoadListener {
-            override fun onUnityAdsAdLoaded(placementId: String) {
-                if (generation != loadGeneration) return
-                loadingPlacement = null
-                rewardedReady = true
-                cancelLoadTimeout()
-                updateDebug { it.copy(rewarded = "Rewarded: loaded") }
-                Log.i(TAG, "Rewarded ad loaded")
-                if (pendingDownload != null) showPendingAd()
-            }
-
-            override fun onUnityAdsFailedToLoad(
-                placementId: String,
-                error: UnityAds.UnityAdsLoadError,
-                message: String,
-            ) {
-                if (generation != loadGeneration) return
-                loadingPlacement = null
-                rewardedReady = false
-                cancelLoadTimeout()
-                updateDebug {
-                    it.copy(
-                        rewarded = "Rewarded: FAILED $error",
-                        lastError = "rewarded $error: $message",
-                    )
+        try {
+            UnityAds.load(REWARDED_PLACEMENT, object : IUnityAdsLoadListener {
+                override fun onUnityAdsAdLoaded(placementId: String) {
+                    if (generation != loadGeneration) return
+                    loadingPlacement = null
+                    rewardedReady = true
+                    cancelLoadTimeout()
+                    updateDebug { it.copy(rewarded = "Rewarded: loaded") }
+                    Log.i(TAG, "Rewarded ad loaded")
+                    if (pendingDownload != null) showPendingAd()
                 }
-                Log.e(TAG, "Rewarded load failed: $error — $message; trying interstitial")
-                loadInterstitial()
+
+                override fun onUnityAdsFailedToLoad(
+                    placementId: String,
+                    error: UnityAds.UnityAdsLoadError,
+                    message: String,
+                ) {
+                    if (generation != loadGeneration) return
+                    loadingPlacement = null
+                    rewardedReady = false
+                    cancelLoadTimeout()
+                    updateDebug {
+                        it.copy(
+                            rewarded = "Rewarded: FAILED $error",
+                            lastError = "rewarded $error: $message",
+                        )
+                    }
+                    Log.e(TAG, "Rewarded load failed: $error — $message; trying interstitial")
+                    loadInterstitial()
+                }
+            })
+        } catch (t: Throwable) {
+            if (generation != loadGeneration) return
+            loadingPlacement = null
+            rewardedReady = false
+            cancelLoadTimeout()
+            updateDebug {
+                it.copy(
+                    rewarded = "Rewarded: load exception",
+                    lastError = "rewarded load exception: ${t.message}",
+                )
             }
-        })
+            Log.e(TAG, "Rewarded load threw ${t.javaClass.name}; trying interstitial", t)
+            loadInterstitial()
+        }
     }
 
     private fun loadInterstitial() {
@@ -587,36 +604,51 @@ object UnityAdManager {
         updateDebug { it.copy(interstitial = "Interstitial: loading") }
         Log.i(TAG, "Loading interstitial ad $INTERSTITIAL_PLACEMENT")
 
-        UnityAds.load(INTERSTITIAL_PLACEMENT, object : IUnityAdsLoadListener {
-            override fun onUnityAdsAdLoaded(placementId: String) {
-                if (generation != loadGeneration) return
-                loadingPlacement = null
-                interstitialReady = true
-                cancelLoadTimeout()
-                updateDebug { it.copy(interstitial = "Interstitial: loaded") }
-                Log.i(TAG, "Interstitial ad loaded")
-                if (pendingDownload != null) showPendingAd()
-            }
-
-            override fun onUnityAdsFailedToLoad(
-                placementId: String,
-                error: UnityAds.UnityAdsLoadError,
-                message: String,
-            ) {
-                if (generation != loadGeneration) return
-                loadingPlacement = null
-                interstitialReady = false
-                cancelLoadTimeout()
-                updateDebug {
-                    it.copy(
-                        interstitial = "Interstitial: FAILED $error",
-                        lastError = "interstitial $error: $message",
-                    )
+        try {
+            UnityAds.load(INTERSTITIAL_PLACEMENT, object : IUnityAdsLoadListener {
+                override fun onUnityAdsAdLoaded(placementId: String) {
+                    if (generation != loadGeneration) return
+                    loadingPlacement = null
+                    interstitialReady = true
+                    cancelLoadTimeout()
+                    updateDebug { it.copy(interstitial = "Interstitial: loaded") }
+                    Log.i(TAG, "Interstitial ad loaded")
+                    if (pendingDownload != null) showPendingAd()
                 }
-                Log.e(TAG, "Interstitial load failed: $error — $message; continuing with download")
-                completePendingDownload()
+
+                override fun onUnityAdsFailedToLoad(
+                    placementId: String,
+                    error: UnityAds.UnityAdsLoadError,
+                    message: String,
+                ) {
+                    if (generation != loadGeneration) return
+                    loadingPlacement = null
+                    interstitialReady = false
+                    cancelLoadTimeout()
+                    updateDebug {
+                        it.copy(
+                            interstitial = "Interstitial: FAILED $error",
+                            lastError = "interstitial $error: $message",
+                        )
+                    }
+                    Log.e(TAG, "Interstitial load failed: $error — $message; continuing with download")
+                    completePendingDownload()
+                }
+            })
+        } catch (t: Throwable) {
+            if (generation != loadGeneration) return
+            loadingPlacement = null
+            interstitialReady = false
+            cancelLoadTimeout()
+            updateDebug {
+                it.copy(
+                    interstitial = "Interstitial: load exception",
+                    lastError = "interstitial load exception: ${t.message}",
+                )
             }
-        })
+            Log.e(TAG, "Interstitial load threw ${t.javaClass.name}; continuing with download", t)
+            completePendingDownload()
+        }
     }
 
     private fun showPendingAd() {
@@ -675,41 +707,49 @@ object UnityAdManager {
             }
         }, SHOW_TIMEOUT_MS)
 
-        UnityAds.show(activity, placementId, object : IUnityAdsShowListener {
-            override fun onUnityAdsShowFailure(
-                placementId: String,
-                error: UnityAds.UnityAdsShowError,
-                message: String,
-            ) {
-                updateDebug {
-                    it.copy(
-                        rewarded = if (isRewarded) "Rewarded: show FAILED $error" else it.rewarded,
-                        interstitial = if (isRewarded) it.interstitial else "Interstitial: show FAILED $error",
-                        lastError = "show $error: $message",
-                    )
+        try {
+            UnityAds.show(activity, placementId, object : IUnityAdsShowListener {
+                override fun onUnityAdsShowFailure(
+                    placementId: String,
+                    error: UnityAds.UnityAdsShowError,
+                    message: String,
+                ) {
+                    updateDebug {
+                        it.copy(
+                            rewarded = if (isRewarded) "Rewarded: show FAILED $error" else it.rewarded,
+                            interstitial = if (isRewarded) it.interstitial else "Interstitial: show FAILED $error",
+                            lastError = "show $error: $message",
+                        )
+                    }
+                    Log.e(TAG, "Ad show failed for $placementId: $error — $message; continuing with download")
+                    finishOnce()
                 }
-                Log.e(TAG, "Ad show failed for $placementId: $error — $message; continuing with download")
-                finishOnce()
-            }
 
-            override fun onUnityAdsShowStart(placementId: String) = Unit
+                override fun onUnityAdsShowStart(placementId: String) = Unit
 
-            override fun onUnityAdsShowClick(placementId: String) = Unit
+                override fun onUnityAdsShowClick(placementId: String) = Unit
 
-            override fun onUnityAdsShowComplete(
-                placementId: String,
-                state: UnityAds.UnityAdsShowCompletionState,
-            ) {
-                updateDebug {
-                    it.copy(
-                        rewarded = if (isRewarded) "Rewarded: closed $state" else it.rewarded,
-                        interstitial = if (isRewarded) it.interstitial else "Interstitial: closed $state",
-                    )
+                override fun onUnityAdsShowComplete(
+                    placementId: String,
+                    state: UnityAds.UnityAdsShowCompletionState,
+                ) {
+                    updateDebug {
+                        it.copy(
+                            rewarded = if (isRewarded) "Rewarded: closed $state" else it.rewarded,
+                            interstitial = if (isRewarded) it.interstitial else "Interstitial: closed $state",
+                        )
+                    }
+                    Log.i(TAG, "Ad closed ($placementId): $state")
+                    finishOnce()
                 }
-                Log.i(TAG, "Ad closed ($placementId): $state")
-                finishOnce()
+            })
+        } catch (t: Throwable) {
+            updateDebug {
+                it.copy(lastError = "show exception for $placementId: ${t.message}")
             }
-        })
+            Log.e(TAG, "Ad show threw ${t.javaClass.name} for $placementId; continuing with download", t)
+            finishOnce()
+        }
     }
 
     private fun finishAdFlow(activity: Activity) {
@@ -727,7 +767,8 @@ object UnityAdManager {
         cancelShowTimeout()
         val action = pendingDownload ?: return
         pendingDownload = null
-        action()
+        runCatching { action() }
+            .onFailure { Log.e(TAG, "Pending download callback failed", it) }
     }
 
     private fun scheduleLoadTimeout(loadGeneration: Int) {

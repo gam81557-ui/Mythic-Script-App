@@ -34,13 +34,13 @@ object LocaleManager {
 
     fun wrap(context: Context): Context = localizedContext(context)
 
-    fun localizedContext(context: Context): Context {
+    fun localizedContext(context: Context): Context = runCatching {
         val locale = localeFor(currentLanguage(context))
         val configuration = Configuration(context.resources.configuration)
         configuration.setLocale(locale)
         configuration.setLocales(LocaleList(locale))
-        return context.createConfigurationContext(configuration)
-    }
+        context.createConfigurationContext(configuration)
+    }.getOrDefault(context)
 
     private fun preferences(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

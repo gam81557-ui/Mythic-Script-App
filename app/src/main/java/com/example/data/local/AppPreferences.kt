@@ -1,26 +1,34 @@
 package com.example.data.local
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
 private val Context.companionDataStore by preferencesDataStore(name = "mythic_script_prefs")
 
 class AppPreferences(private val context: Context) {
 
-    val targetPackageFlow: Flow<String> = context.companionDataStore.data.map { prefs ->
+    private val safeData = context.companionDataStore.data.catch { error ->
+        Log.e("AppPreferences", "Unable to read preferences", error)
+        emit(emptyPreferences())
+    }
+
+    val targetPackageFlow: Flow<String> = safeData.map { prefs ->
         prefs[KEY_TARGET_PACKAGE]?.takeIf { isValidPackageName(it) } ?: DEFAULT_TARGET_PACKAGE
     }
 
-    val disclaimerDismissedFlow: Flow<Boolean> = context.companionDataStore.data.map { prefs ->
+    val disclaimerDismissedFlow: Flow<Boolean> = safeData.map { prefs ->
         prefs[KEY_DISCLAIMER_DISMISSED] ?: false
     }
 
-    val selectedHeroIdFlow: Flow<String?> = context.companionDataStore.data.map { prefs ->
+    val selectedHeroIdFlow: Flow<String?> = safeData.map { prefs ->
         prefs[KEY_SELECTED_HERO_ID]
     }
 
@@ -33,22 +41,28 @@ class AppPreferences(private val context: Context) {
                 )
             )
         }
-        context.companionDataStore.edit { prefs ->
-            prefs[KEY_TARGET_PACKAGE] = trimmed
+        return runCatching {
+            context.companionDataStore.edit { prefs ->
+                prefs[KEY_TARGET_PACKAGE] = trimmed
+            }
+            trimmed
         }
-        return Result.success(trimmed)
     }
 
     suspend fun setDisclaimerDismissed(dismissed: Boolean) {
-        context.companionDataStore.edit { prefs ->
-            prefs[KEY_DISCLAIMER_DISMISSED] = dismissed
-        }
+        runCatching {
+            context.companionDataStore.edit { prefs ->
+                prefs[KEY_DISCLAIMER_DISMISSED] = dismissed
+            }
+        }.onFailure { Log.e("AppPreferences", "Unable to save disclaimer state", it) }
     }
 
     suspend fun setSelectedHeroId(heroId: String) {
-        context.companionDataStore.edit { prefs ->
-            prefs[KEY_SELECTED_HERO_ID] = heroId
-        }
+        runCatching {
+            context.companionDataStore.edit { prefs ->
+                prefs[KEY_SELECTED_HERO_ID] = heroId
+            }
+        }.onFailure { Log.e("AppPreferences", "Unable to save selected hero", it) }
     }
 
     companion object {

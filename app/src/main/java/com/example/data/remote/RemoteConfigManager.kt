@@ -1,11 +1,13 @@
 package com.example.data.remote
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.IOException
+import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -39,17 +41,23 @@ class RemoteConfigManager(
             try {
                 val statusCode = connection.responseCode
                 if (statusCode !in 200..299) {
-                    val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    val errorBody = connection.errorStream?.bufferedReader()?.use {
+                        readTextLimited(it, MAX_ERROR_CHARS)
+                    }
                     throw IOException(
                         "Remote config HTTP $statusCode${errorBody?.takeIf { it.isNotBlank() }?.let { ": $it" }.orEmpty()}"
                     )
                 }
 
-                val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use {
+                    readTextLimited(it, MAX_RESPONSE_CHARS)
+                }
                 parseConfigJson(body, timestampMillis).getOrThrow()
             } finally {
                 connection.disconnect()
             }
+        }.onFailure {
+            if (it is CancellationException) throw it
         }
     }
 
@@ -564,11 +572,29 @@ class RemoteConfigManager(
         }
     }
 
+    private fun readTextLimited(reader: Reader, maxChars: Int): String {
+        val output = StringBuilder(minOf(maxChars, 8_192))
+        val buffer = CharArray(8_192)
+        var total = 0
+        while (true) {
+            val read = reader.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > maxChars) {
+                throw IOException("Remote config response exceeds the safe size limit.")
+            }
+            output.append(buffer, 0, read)
+        }
+        return output.toString()
+    }
+
     companion object {
         const val DEFAULT_CONFIG_URL =
             "https://raw.githubusercontent.com/gam81557-ui/MLBBSkin-Config/refs/heads/main/unlockskins_fixed.json"
         const val CONNECT_TIMEOUT_MS = 20_000
         const val READ_TIMEOUT_MS = 20_000
+        private const val MAX_RESPONSE_CHARS = 8_000_000
+        private const val MAX_ERROR_CHARS = 16_000
         private const val DEFAULT_MAINTENANCE_MESSAGE =
             "Script injection is temporarily paused for maintenance."
 

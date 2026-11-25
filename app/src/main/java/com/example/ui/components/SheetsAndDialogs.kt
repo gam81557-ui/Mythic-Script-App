@@ -72,7 +72,7 @@ fun ImportZipConfirmationSheet(
     var selectedHeroId by remember(preview.scriptId) {
         mutableStateOf(
             if (heroes.any { it.id == preview.suggestedHeroId }) preview.suggestedHeroId
-            else heroes.first().id
+            else heroes.firstOrNull()?.id ?: preview.suggestedHeroId
         )
     }
     var skinName by remember(preview.scriptId) { mutableStateOf(preview.suggestedSkinName) }

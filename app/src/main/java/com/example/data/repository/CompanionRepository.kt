@@ -12,6 +12,7 @@ import com.example.domain.model.HeroProfile
 import com.example.domain.model.ScriptLifecycleState
 import com.example.domain.model.StagedBundlePreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 
 class CompanionRepository(
     private val dao: CompanionDao,
@@ -22,7 +23,9 @@ class CompanionRepository(
     val heroes: List<HeroProfile> = HeroCatalogProvider.heroes
 
     val allScriptsFlow: Flow<List<SkinScriptEntity>> = dao.observeAllScripts()
+        .catch { emit(emptyList()) }
     val allBackupEntriesFlow: Flow<List<BackupEntryEntity>> = dao.observeAllBackupEntries()
+        .catch { emit(emptyList()) }
     val targetPackageFlow: Flow<String> = preferences.targetPackageFlow
     val disclaimerDismissedFlow: Flow<Boolean> = preferences.disclaimerDismissedFlow
     val selectedHeroIdFlow: Flow<String?> = preferences.selectedHeroIdFlow
@@ -83,12 +86,16 @@ class CompanionRepository(
 
     suspend fun ensureRemoteScriptPersisted(script: com.example.domain.model.SkinScriptItem) {
         if (dao.getScriptById(script.scriptId) != null) return
-        val effectivePaths = script.targetRelativePaths.ifEmpty {
-            listOf("files/dragon2017/assets/Art/Android/${script.scriptId.lowercase().replace(Regex("[^a-z0-9._-]"), "_")}.unity3d")
-        }
-        val stagedDir = java.io.File(archiveManager.stagedRootDir, script.scriptId)
-        effectivePaths.forEach { relPath ->
-            val safeRel = ScriptArchiveManager.sanitizeRelativePath(relPath) ?: return@forEach
+        val fallbackPath = "files/dragon2017/assets/Art/Android/" +
+            "${script.scriptId.lowercase().replace(Regex("[^a-z0-9._-]"), "_")}.unity3d"
+        val effectivePaths = (script.targetRelativePaths.ifEmpty { listOf(fallbackPath) })
+            .mapNotNull { ScriptArchiveManager.sanitizeRelativePath(it) }
+            .ifEmpty { listOf(fallbackPath) }
+        val stagedDir = java.io.File(
+            archiveManager.stagedRootDir,
+            ScriptArchiveManager.sanitizeFileSegment(script.scriptId),
+        )
+        effectivePaths.forEach { safeRel ->
             val outFile = java.io.File(stagedDir, safeRel)
             if (!outFile.exists()) {
                 outFile.parentFile?.mkdirs()

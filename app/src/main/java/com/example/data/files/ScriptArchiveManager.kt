@@ -12,7 +12,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
@@ -41,7 +43,7 @@ class ScriptArchiveManager(private val context: Context) {
     suspend fun ensureCatalogTemplatesStaged(templates: List<CatalogScriptTemplate>) =
         withContext(Dispatchers.IO) {
             templates.forEach { tpl ->
-                val scriptDir = File(stagedRootDir, tpl.scriptId)
+                val scriptDir = File(stagedRootDir, sanitizeFileSegment(tpl.scriptId))
                 tpl.relativeTargetPaths.forEach { relPath ->
                     val safeRel = sanitizeRelativePath(relPath) ?: return@forEach
                     val outFile = File(scriptDir, safeRel)
@@ -137,10 +139,16 @@ class ScriptArchiveManager(private val context: Context) {
         onFileExtracted: (relativePath: String, byteCount: Long) -> Unit,
     ) {
         val canonicalRoot = stagingDir.canonicalFile
+        var entryCount = 0
+        var totalExtractedBytes = 0L
         ZipInputStream(inputStream.buffered()).use { zip ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
                 val entry = zip.nextEntry ?: break
+                entryCount++
+                if (entryCount > MAX_ZIP_ENTRIES) {
+                    throw IOException("Archive contains too many entries.")
+                }
                 val rawName = entry.name
                 if (entry.isDirectory || shouldIgnoreZipEntry(rawName)) {
                     zip.closeEntry()
@@ -151,7 +159,7 @@ class ScriptArchiveManager(private val context: Context) {
                     ?: throw SecurityException("Unsafe archive entry path rejected: $rawName")
 
                 if (sanitizedRel.equals("manifest.json", ignoreCase = true)) {
-                    val manifestText = zip.readBytes().toString(Charsets.UTF_8)
+                    val manifestText = readLimited(zip, MAX_MANIFEST_BYTES).toString(Charsets.UTF_8)
                     onManifestFound(manifestText)
                     zip.closeEntry()
                     continue
@@ -174,6 +182,10 @@ class ScriptArchiveManager(private val context: Context) {
                     }
                 }
                 zip.closeEntry()
+                totalExtractedBytes += fileBytes
+                if (totalExtractedBytes > MAX_EXTRACTED_BYTES) {
+                    throw IOException("Archive exceeds the safe extraction size limit.")
+                }
                 onFileExtracted(normalizedRel, fileBytes)
             }
         }
@@ -198,7 +210,8 @@ class ScriptArchiveManager(private val context: Context) {
             }
 
             onProgress(0.10f)
-            val tempFile = File(context.cacheDir, "dl_${scriptId}_${System.currentTimeMillis()}.tmp")
+            val safeTempId = sanitizeFileSegment(scriptId)
+            val tempFile = File(context.cacheDir, "dl_${safeTempId}_${System.currentTimeMillis()}.tmp")
             var downloadedFileName = resolveFileNameFromUrl(initialUrl)
 
             try {
@@ -235,7 +248,7 @@ class ScriptArchiveManager(private val context: Context) {
 
                         if (contentType.contains("text/html")) {
                             val html = connection.inputStream.bufferedReader(Charsets.UTF_8).use {
-                                it.readText().take(256_000)
+                                readTextLimited(it, MAX_HTML_CHARS)
                             }
                             val nextUrl = extractDirectDownloadUrlFromHtml(html, currentUrl)
                             if (nextUrl != null && nextUrl != currentUrl) {
@@ -255,6 +268,9 @@ class ScriptArchiveManager(private val context: Context) {
                                     if (read <= 0) break
                                     output.write(buffer, 0, read)
                                     downloadedBytes += read
+                                    if (downloadedBytes > MAX_DOWNLOAD_BYTES) {
+                                        throw IOException("Downloaded file exceeds the safe size limit.")
+                                    }
                                     if (totalLength > 0L) {
                                         val fraction = 0.15f + 0.65f * (downloadedBytes.toFloat() / totalLength.toFloat())
                                         onProgress(fraction.coerceIn(0.15f, 0.80f))
@@ -266,9 +282,14 @@ class ScriptArchiveManager(private val context: Context) {
                         if (downloadedBytes == 0L) {
                             throw IOException("Downloaded file was empty (0 bytes).")
                         }
+                        if (downloadedBytes > MAX_DOWNLOAD_BYTES) {
+                            throw IOException("Downloaded file exceeds the safe size limit.")
+                        }
 
                         if (looksLikeHtmlDocument(tempFile)) {
-                            val html = tempFile.readText(Charsets.UTF_8).take(256_000)
+                            val html = tempFile.inputStream().bufferedReader(Charsets.UTF_8).use {
+                                readTextLimited(it, MAX_HTML_CHARS)
+                            }
                             val nextUrl = extractDirectDownloadUrlFromHtml(html, currentUrl)
                             if (nextUrl != null && nextUrl != currentUrl) {
                                 currentUrl = nextUrl
@@ -289,7 +310,7 @@ class ScriptArchiveManager(private val context: Context) {
                 }
 
                 onProgress(0.85f)
-                val safeDirName = scriptId.trim().replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                val safeDirName = sanitizeFileSegment(scriptId)
                 val stagingDir = File(stagedRootDir, safeDirName).apply {
                     if (exists()) deleteRecursively()
                     mkdirs()
@@ -448,7 +469,50 @@ class ScriptArchiveManager(private val context: Context) {
         }.getOrNull()
     }
 
+    private fun readLimited(input: InputStream, maxBytes: Int): ByteArray {
+        val output = ByteArrayOutputStream(minOf(maxBytes, 8_192))
+        val buffer = ByteArray(8_192)
+        var total = 0
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > maxBytes) {
+                throw IOException("Archive entry exceeds the safe size limit.")
+            }
+            output.write(buffer, 0, read)
+        }
+        return output.toByteArray()
+    }
+
+    private fun readTextLimited(reader: Reader, maxChars: Int): String {
+        val output = StringBuilder(minOf(maxChars, 8_192))
+        val buffer = CharArray(8_192)
+        var total = 0
+        while (true) {
+            val read = reader.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > maxChars) {
+                throw IOException("Downloaded response exceeds the safe size limit.")
+            }
+            output.append(buffer, 0, read)
+        }
+        return output.toString()
+    }
+
     companion object {
+        const val MAX_MANIFEST_BYTES = 1_000_000
+        const val MAX_HTML_CHARS = 256_000
+        const val MAX_EXTRACTED_BYTES = 512L * 1024 * 1024
+        const val MAX_DOWNLOAD_BYTES = 512L * 1024 * 1024
+        const val MAX_ZIP_ENTRIES = 20_000
+
+        fun sanitizeFileSegment(raw: String): String {
+            val cleaned = raw.trim().replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            return if (cleaned.isBlank() || cleaned == "." || cleaned == "..") "script" else cleaned
+        }
+
         fun shouldIgnoreZipEntry(name: String): Boolean {
             val trimmed = name.trim()
             return trimmed.isEmpty() ||
