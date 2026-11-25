@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.catalog.HeroCatalogProvider
@@ -495,11 +496,21 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun maybeGateDownload(onProceed: () -> Unit) {
         val gate = adGate
-        if (requireAdForDownload() && gate != null) {
+        val requireAd = requireAdForDownload()
+        Log.d(
+            "CompanionViewModel",
+            "Download gate: requireAdForDownload=$requireAd, gateAttached=${gate != null}",
+        )
+        if (requireAd && gate != null) {
             if (!gate(onProceed)) {
                 snackbarMessageFlow.value = "Please wait for the current ad to finish."
             }
         } else {
+            if (requireAd) {
+                Log.w("CompanionViewModel", "Ad gate bypassed: UI gate is not attached")
+            } else {
+                Log.d("CompanionViewModel", "Ad gate bypassed: requireAdForDownload=false")
+            }
             onProceed()
         }
     }

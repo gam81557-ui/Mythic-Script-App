@@ -16,8 +16,8 @@ android {
     applicationId = "com.mythic.script"
     minSdk = 24
     targetSdk = 36
-    versionCode = 325
-    versionName = "3.2.5"
+    versionCode = 326
+    versionName = "3.2.6"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -84,7 +84,7 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
-    implementation("com.unity3d.ads:unity-ads:4.15.0")
+    implementation("com.unity3d.ads:unity-ads:4.22.0")
   implementation(platform(libs.androidx.compose.bom))
   // implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
