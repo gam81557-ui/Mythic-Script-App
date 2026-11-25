@@ -41,9 +41,36 @@ data class RemoteConfig(
     val heroFallbackPortraits: Map<String, String> = emptyMap(),
     /** When true (the default) a rewarded/interstitial ad must be watched before a skin download. */
     val requireAdForDownload: Boolean = true,
+    /** Explicit "show_notice" flag. Missing values mean no notice unless maintenance is active. */
+    val showNotice: Boolean = false,
+    /** Stable identifier supplied by files.json for the current notice. */
+    val noticeId: String = "",
+    /** Optional remote title, e.g. title / update_title. */
+    val noticeTitle: String = "",
+    /** Optional remote body, e.g. message / release_note / description. */
+    val noticeMessage: String = "",
+    /** Optional maintenance-specific title; falls back to noticeTitle. */
+    val maintenanceTitle: String = "",
 ) {
     val canInjectRemotely: Boolean
         get() = !maintenanceMode && injectionEnabled
+
+    val hasNotification: Boolean
+        get() = maintenanceMode || showNotice
+
+    /**
+     * Changes whenever the notice id, title, or body changes. The ViewModel uses this
+     * to show a previously dismissed notice again only when its content changes.
+     */
+    val notificationContentKey: String
+        get() = listOf(
+            if (maintenanceMode) "maintenance" else "notice",
+            noticeId.trim(),
+            noticeTitle.trim(),
+            noticeMessage.trim(),
+            maintenanceTitle.trim(),
+            maintenanceMessage.trim(),
+        ).joinToString("|")
 }
 
 /**

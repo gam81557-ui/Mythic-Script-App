@@ -269,4 +269,98 @@ class RemoteConfigManagerTest {
         ).getOrThrow()
         assertFalse(arrayRoot.requireAdForDownload)
     }
+
+    @Test
+    fun `parses show_notice with notice id title and message`() {
+        val raw = """
+            {
+              "maintenance": false,
+              "show_notice": true,
+              "notice_id": "notice_2026_11_25_01",
+              "title": "Notification",
+              "message": "New scripts are ready."
+            }
+        """.trimIndent()
+
+        val cfg = manager.parseConfigJson(raw).getOrThrow()
+        assertTrue(cfg.showNotice)
+        assertTrue(cfg.hasNotification)
+        assertEquals("notice_2026_11_25_01", cfg.noticeId)
+        assertEquals("Notification", cfg.noticeTitle)
+        assertEquals("New scripts are ready.", cfg.noticeMessage)
+        assertTrue(cfg.notificationContentKey.contains("notice_2026_11_25_01"))
+    }
+
+    @Test
+    fun `explicit show_notice false suppresses notice when maintenance is off`() {
+        val cfg = manager.parseConfigJson(
+            """{ "maintenance": false, "show_notice": false, "message": "Hidden notice" }"""
+        ).getOrThrow()
+        assertFalse(cfg.showNotice)
+        assertFalse(cfg.hasNotification)
+    }
+
+    @Test
+    fun `maintenance remains active when show_notice is explicitly false`() {
+        val cfg = manager.parseConfigJson(
+            """{
+              "maintenance": true,
+              "show_notice": false,
+              "maintenance_title": "Server Maintenance",
+              "maintenance_message": "Please wait while we patch the server."
+            }"""
+        ).getOrThrow()
+        assertTrue(cfg.maintenanceMode)
+        assertFalse(cfg.showNotice)
+        assertTrue(cfg.hasNotification)
+        assertEquals("Server Maintenance", cfg.maintenanceTitle)
+        assertEquals("Please wait while we patch the server.", cfg.maintenanceMessage)
+    }
+
+    @Test
+    fun `notice supports alternate keys and content changes update the identity`() {
+        val first = manager.parseConfigJson(
+            """{
+              "show_notice": true,
+              "notice_id": "n1",
+              "update_title": "Release Notes",
+              "release_note": "First release."
+            }"""
+        ).getOrThrow()
+        assertEquals("Release Notes", first.noticeTitle)
+        assertEquals("First release.", first.noticeMessage)
+
+        val changedText = manager.parseConfigJson(
+            """{
+              "show_notice": true,
+              "notice_id": "n1",
+              "update_title": "Release Notes",
+              "release_note": "Updated release."
+            }"""
+        ).getOrThrow()
+        val changedId = manager.parseConfigJson(
+            """{
+              "show_notice": true,
+              "notice_id": "n2",
+              "update_title": "Release Notes",
+              "release_note": "Updated release."
+            }"""
+        ).getOrThrow()
+
+        assertTrue(first.notificationContentKey != changedText.notificationContentKey)
+        assertTrue(changedText.notificationContentKey != changedId.notificationContentKey)
+    }
+
+    @Test
+    fun `notice falls back through message release_note and description keys`() {
+        val releaseNote = manager.parseConfigJson(
+            """{ "show_notice": true, "release_note": "From release note" }"""
+        ).getOrThrow()
+        assertEquals("From release note", releaseNote.noticeMessage)
+
+        val description = manager.parseConfigJson(
+            """{ "show_notice": true, "description": "From description" }"""
+        ).getOrThrow()
+        assertEquals("From description", description.noticeMessage)
+    }
 }

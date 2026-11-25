@@ -16,6 +16,12 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
+enum class ShizukuStatusAction {
+    RequestPermission,
+    Refresh,
+    ShowGuide,
+}
+
 sealed class ShizukuConnectionState {
     data object NotInstalled : ShizukuConnectionState()
     data object NotRunning : ShizukuConnectionState()
@@ -26,6 +32,17 @@ sealed class ShizukuConnectionState {
 
     val isReadyForIo: Boolean
         get() = this is ServiceConnected
+
+    fun statusAction(): ShizukuStatusAction = when (this) {
+        is PermissionDenied -> ShizukuStatusAction.RequestPermission
+        PermissionGranted,
+        is ServiceConnected,
+        -> ShizukuStatusAction.Refresh
+        NotRunning,
+        NotInstalled,
+        is ServiceDisconnected,
+        -> ShizukuStatusAction.ShowGuide
+    }
 
     fun shortLabel(): String = when (this) {
         NotInstalled -> "Not Installed"
@@ -62,20 +79,28 @@ class ShizukuBridgeManager(private val appContext: Context) {
 
     private val userServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val stub = IFileBridgeService.Stub.asInterface(service)
-            fileBridgeService = stub
-            isBound = stub != null
-            if (stub != null) {
-                val uid = runCatching { stub.uid }.getOrDefault(-1)
-                val label = when (uid) {
-                    0 -> "UID 0 Root"
-                    2000 -> "UID 2000 Shell"
-                    else -> "UID $uid"
+            runCatching {
+                val stub = IFileBridgeService.Stub.asInterface(service)
+                fileBridgeService = stub
+                isBound = stub != null
+                if (stub != null) {
+                    val uid = runCatching { stub.uid }.getOrDefault(-1)
+                    val label = when (uid) {
+                        0 -> "UID 0 Root"
+                        2000 -> "UID 2000 Shell"
+                        else -> "UID $uid"
+                    }
+                    _connectionState.value = ShizukuConnectionState.ServiceConnected(uid, label)
+                } else {
+                    _connectionState.value = ShizukuConnectionState.ServiceDisconnected(
+                        "Binder interface returned null"
+                    )
                 }
-                _connectionState.value = ShizukuConnectionState.ServiceConnected(uid, label)
-            } else {
+            }.onFailure { err ->
+                fileBridgeService = null
+                isBound = false
                 _connectionState.value = ShizukuConnectionState.ServiceDisconnected(
-                    "Binder interface returned null"
+                    err.message ?: "Failed to connect UserService"
                 )
             }
         }
@@ -102,7 +127,9 @@ class ShizukuBridgeManager(private val appContext: Context) {
             if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
                 if (grantResult == PackageManager.PERMISSION_GRANTED) {
                     _connectionState.value = ShizukuConnectionState.PermissionGranted
-                    bindUserService()
+                    // Re-read the live binder/UID immediately after the grant so the pill
+                    // switches from "Grant" to the connected UID without another tap.
+                    refreshStatus()
                 } else {
                     val canAsk = runCatching {
                         !Shizuku.shouldShowRequestPermissionRationale()
@@ -114,12 +141,23 @@ class ShizukuBridgeManager(private val appContext: Context) {
 
     fun startListening() {
         if (!isRegistered) {
-            Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
-            Shizuku.addBinderDeadListener(binderDeadListener)
-            Shizuku.addRequestPermissionResultListener(permissionResultListener)
-            isRegistered = true
+            isRegistered = runCatching {
+                Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
+                Shizuku.addBinderDeadListener(binderDeadListener)
+                Shizuku.addRequestPermissionResultListener(permissionResultListener)
+                true
+            }.onFailure { err ->
+                _connectionState.value = ShizukuConnectionState.ServiceDisconnected(
+                    err.message ?: "Failed to register Shizuku listeners"
+                )
+            }.getOrDefault(false)
         }
-        refreshStatus()
+        runCatching { refreshStatus() }
+            .onFailure { err ->
+                _connectionState.value = ShizukuConnectionState.ServiceDisconnected(
+                    err.message ?: "Failed to refresh Shizuku status"
+                )
+            }
     }
 
     fun stopListening() {
@@ -243,11 +281,11 @@ class ShizukuBridgeManager(private val appContext: Context) {
     }
 
     fun openShizukuApp(): Boolean {
-        val launchIntent = appContext.packageManager
-            .getLaunchIntentForPackage(SHIZUKU_PACKAGE_NAME)
-            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            ?: return false
         return runCatching {
+            val launchIntent = appContext.packageManager
+                .getLaunchIntentForPackage(SHIZUKU_PACKAGE_NAME)
+                ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                ?: return@runCatching false
             appContext.startActivity(launchIntent)
             true
         }.getOrDefault(false)

@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Launch
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -47,12 +48,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.local.AppPreferences
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.HeroProfile
 import com.example.domain.model.StagedBundlePreview
+import com.example.localization.localizedShizukuReason
 import com.example.shizuku.ShizukuConnectionState
 import com.example.ui.theme.LocalSemanticColors
 
@@ -69,7 +73,7 @@ fun ImportZipConfirmationSheet(
     var selectedHeroId by remember(preview.scriptId) {
         mutableStateOf(
             if (heroes.any { it.id == preview.suggestedHeroId }) preview.suggestedHeroId
-            else heroes.first().id
+            else heroes.firstOrNull()?.id ?: preview.suggestedHeroId
         )
     }
     var skinName by remember(preview.scriptId) { mutableStateOf(preview.suggestedSkinName) }
@@ -99,11 +103,15 @@ fun ImportZipConfirmationSheet(
                 )
                 Column {
                     Text(
-                        text = "Stage Imported .zip Bundle",
+                        text = stringResource(R.string.stage_imported_zip),
                         style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
-                        text = "${preview.relativeTargetPaths.size} file(s) • ${Formatter.formatShortFileSize(context, preview.totalBytes)}",
+                        text = stringResource(
+                            R.string.files_size,
+                            preview.relativeTargetPaths.size,
+                            Formatter.formatShortFileSize(context, preview.totalBytes),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -111,7 +119,7 @@ fun ImportZipConfirmationSheet(
             }
 
             Text(
-                text = "Assign Target Hero",
+                text = stringResource(R.string.assign_target_hero),
                 style = MaterialTheme.typography.labelLarge,
             )
             Row(
@@ -133,7 +141,7 @@ fun ImportZipConfirmationSheet(
             OutlinedTextField(
                 value = skinName,
                 onValueChange = { skinName = it },
-                label = { Text("Skin Script Name") },
+                label = { Text(stringResource(R.string.skin_script_name)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,14 +155,14 @@ fun ImportZipConfirmationSheet(
                 OutlinedTextField(
                     value = tierTag,
                     onValueChange = { tierTag = it },
-                    label = { Text("Tier / Tag") },
+                    label = { Text(stringResource(R.string.tier_tag)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
                     value = version,
                     onValueChange = { version = it },
-                    label = { Text("Version") },
+                    label = { Text(stringResource(R.string.version)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
@@ -163,7 +171,7 @@ fun ImportZipConfirmationSheet(
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("Compatibility Notes") },
+                label = { Text(stringResource(R.string.compatibility_notes)) },
                 maxLines = 2,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -178,7 +186,7 @@ fun ImportZipConfirmationSheet(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Verified Target Relative Paths",
+                        text = stringResource(R.string.verified_target_paths),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     preview.relativeTargetPaths.take(5).forEach { rel ->
@@ -190,7 +198,7 @@ fun ImportZipConfirmationSheet(
                     }
                     if (preview.relativeTargetPaths.size > 5) {
                         Text(
-                            text = "+${preview.relativeTargetPaths.size - 5} more file(s)",
+                            text = stringResource(R.string.more_files, preview.relativeTargetPaths.size - 5),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -210,7 +218,7 @@ fun ImportZipConfirmationSheet(
                         .weight(1f)
                         .minimumInteractiveComponentSize(),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
                 Button(
                     onClick = { onConfirm(selectedHeroId, skinName, tierTag, version, notes) },
@@ -219,11 +227,141 @@ fun ImportZipConfirmationSheet(
                         .minimumInteractiveComponentSize()
                         .testTag("confirm_import_bundle_button"),
                 ) {
-                    Text("Stage Script")
+                    Text(stringResource(R.string.action_stage_script))
                 }
             }
         }
     }
+}
+
+@Composable
+fun ShizukuGuideDialog(
+    state: ShizukuConnectionState,
+    onOpenShizukuApp: () -> Unit,
+    onWatchTutorial: () -> Unit,
+    onRefresh: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val message = when (state) {
+        ShizukuConnectionState.NotInstalled ->
+            stringResource(R.string.shizuku_guide_not_installed)
+        ShizukuConnectionState.NotRunning ->
+            stringResource(R.string.shizuku_guide_not_running)
+        is ShizukuConnectionState.PermissionDenied ->
+            stringResource(R.string.shizuku_guide_permission)
+        ShizukuConnectionState.PermissionGranted ->
+            stringResource(R.string.shizuku_permission_granted_message)
+        is ShizukuConnectionState.ServiceConnected ->
+            stringResource(R.string.shizuku_connected_message, state.processLabel)
+        is ShizukuConnectionState.ServiceDisconnected ->
+            stringResource(R.string.shizuku_guide_disconnected)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Filled.Security,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.shizuku_guide_title),
+                modifier = Modifier.testTag("shizuku_guide_title"),
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("shizuku_guide_message"),
+                )
+                HorizontalDivider()
+                Text(
+                    text = stringResource(R.string.shizuku_how_to_start),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.shizuku_how_to_start_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onWatchTutorial,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_watch_tutorial_button"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_watch_tutorial))
+                }
+                Text(
+                    text = stringResource(R.string.shizuku_tutorial_credit),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.testTag("shizuku_tutorial_credit"),
+                )
+                if (state == ShizukuConnectionState.NotInstalled) {
+                    Text(
+                        text = stringResource(R.string.msg_shizuku_not_installed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("shizuku_not_installed_fallback"),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onOpenShizukuApp,
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .testTag("shizuku_open_app_button"),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Launch,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_open_shizuku))
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_guide_refresh"),
+                ) {
+                    Text(stringResource(R.string.action_refresh))
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_guide_close"),
+                ) {
+                    Text(stringResource(R.string.action_close))
+                }
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -262,7 +400,7 @@ fun PackageAndDiagnosticsSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
-                text = "Shizuku & Target Package",
+                text = stringResource(R.string.shizuku_target_package),
                 style = MaterialTheme.typography.titleLarge,
             )
 
@@ -291,7 +429,7 @@ fun PackageAndDiagnosticsSheet(
                                 tint = if (shizukuState.isReadyForIo) semantic.active else semantic.warning,
                             )
                             Text(
-                                text = "Shizuku AIDL UserService",
+                                text = stringResource(R.string.shizuku_aidl_service),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
@@ -304,17 +442,29 @@ fun PackageAndDiagnosticsSheet(
                     Text(
                         text = when (shizukuState) {
                             ShizukuConnectionState.NotInstalled ->
-                                "Shizuku (moe.shizuku.privileged.api) was not found. Install Shizuku to manage /Android/data/ on Android 11–15+."
+                                stringResource(R.string.shizuku_not_installed_message)
                             ShizukuConnectionState.NotRunning ->
-                                "Shizuku is installed, but its background binder is not running. Start Shizuku via Wireless Debugging or ADB first."
+                                stringResource(R.string.shizuku_not_running_message)
                             is ShizukuConnectionState.PermissionDenied ->
-                                "Shizuku is running, but permission for Mythic Script is denied. Grant access to bind the UID 2000 FileBridge service."
+                                stringResource(R.string.shizuku_permission_denied_message)
                             ShizukuConnectionState.PermissionGranted ->
-                                "Permission granted. Binding FileBridgeUserService via Shizuku…"
+                                stringResource(R.string.shizuku_permission_granted_message)
                             is ShizukuConnectionState.ServiceConnected ->
-                                "Privileged FileBridgeUserService is connected (${shizukuState.processLabel}). Restricted /Android/data/ I/O is active."
-                            is ShizukuConnectionState.ServiceDisconnected ->
-                                "UserService disconnected${shizukuState.reason?.let { ": $it" } ?: "."}"
+                                stringResource(
+                                    R.string.shizuku_connected_message,
+                                    shizukuState.processLabel,
+                                )
+                            is ShizukuConnectionState.ServiceDisconnected -> {
+                                val suffix = if (shizukuState.reason != null) {
+                                    stringResource(
+                                        R.string.shizuku_disconnected_reason,
+                                        shizukuState.reason.localizedShizukuReason(context),
+                                    )
+                                } else {
+                                    "."
+                                }
+                                stringResource(R.string.shizuku_disconnected_message, suffix)
+                            }
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -333,7 +483,7 @@ fun PackageAndDiagnosticsSheet(
                                         .minimumInteractiveComponentSize()
                                         .testTag("sheet_request_shizuku_permission"),
                                 ) {
-                                    Text("Grant Permission")
+                                    Text(stringResource(R.string.action_grant_permission))
                                 }
                             }
                             ShizukuConnectionState.PermissionGranted,
@@ -346,7 +496,7 @@ fun PackageAndDiagnosticsSheet(
                                         .minimumInteractiveComponentSize()
                                         .testTag("sheet_bind_shizuku_service"),
                                 ) {
-                                    Text("Bind Service")
+                                    Text(stringResource(R.string.action_bind_service))
                                 }
                             }
                             ShizukuConnectionState.NotRunning -> {
@@ -362,7 +512,7 @@ fun PackageAndDiagnosticsSheet(
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Open Shizuku")
+                                    Text(stringResource(R.string.action_open_shizuku))
                                 }
                             }
                             else -> Unit
@@ -380,7 +530,7 @@ fun PackageAndDiagnosticsSheet(
                                 modifier = Modifier.size(16.dp),
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Refresh")
+                            Text(stringResource(R.string.action_refresh))
                         }
                     }
                 }
@@ -390,11 +540,11 @@ fun PackageAndDiagnosticsSheet(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Target Game Package Override",
+                    text = stringResource(R.string.target_package_override),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    text = "Files are backed up from and injected into /storage/emulated/0/Android/data/<package>/",
+                    text = stringResource(R.string.target_package_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -406,7 +556,7 @@ fun PackageAndDiagnosticsSheet(
                             packageInput = AppPreferences.DEFAULT_TARGET_PACKAGE
                             onUpdateTargetPackage(AppPreferences.DEFAULT_TARGET_PACKAGE)
                         },
-                        label = { Text("Global (${AppPreferences.DEFAULT_TARGET_PACKAGE})") },
+                        label = { Text(stringResource(R.string.global_package, AppPreferences.DEFAULT_TARGET_PACKAGE)) },
                         modifier = Modifier.testTag("preset_global_package_chip"),
                     )
                 }
@@ -414,16 +564,16 @@ fun PackageAndDiagnosticsSheet(
                 OutlinedTextField(
                     value = packageInput,
                     onValueChange = { packageInput = it },
-                    label = { Text("Custom Target Package") },
+                    label = { Text(stringResource(R.string.custom_target_package)) },
                     isError = !isPackageValid,
                     supportingText = {
                         Text(
                             text = if (!isPackageValid) {
-                                "Enter a valid Android application ID (e.g. com.mobile.legends)"
+                                stringResource(R.string.invalid_package)
                             } else if (isTargetPackageInstalled) {
-                                "Package detected on device"
+                                stringResource(R.string.package_detected)
                             } else {
-                                "Package not detected via PackageManager (custom path override still allowed)"
+                                stringResource(R.string.package_not_detected)
                             }
                         )
                     },
@@ -441,7 +591,7 @@ fun PackageAndDiagnosticsSheet(
                         .minimumInteractiveComponentSize()
                         .testTag("apply_package_override_button"),
                 ) {
-                    Text("Save Target Package")
+                    Text(stringResource(R.string.action_save_target_package))
                 }
             }
 
@@ -463,11 +613,14 @@ fun PackageAndDiagnosticsSheet(
                     )
                     Column {
                         Text(
-                            text = "App-Private Backup Storage",
+                            text = stringResource(R.string.app_private_backup),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            text = Formatter.formatShortFileSize(context, totalBackupBytes) + " stored",
+                            text = stringResource(
+                            R.string.stored_size,
+                            Formatter.formatShortFileSize(context, totalBackupBytes),
+                        ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -475,7 +628,7 @@ fun PackageAndDiagnosticsSheet(
                 }
                 if (disclaimerDismissed) {
                     TextButton(onClick = onRestoreDisclaimer) {
-                        Text("Show Banner")
+                        Text(stringResource(R.string.action_show_banner))
                     }
                 }
             }
@@ -494,7 +647,7 @@ fun PackageAndDiagnosticsSheet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "GitHub Remote Configuration",
+                        text = stringResource(R.string.github_remote_config),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     OutlinedButton(
@@ -509,18 +662,27 @@ fun PackageAndDiagnosticsSheet(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sync Config")
+                        Text(stringResource(R.string.action_sync_config))
                     }
                 }
                 Text(
                     text = when (remoteConfigState) {
-                        RemoteConfigState.Loading -> "Fetching latest remote flags from GitHub Raw…"
+                        RemoteConfigState.Loading -> stringResource(R.string.fetching_remote)
                         is RemoteConfigState.Ready -> {
                             val cfg = remoteConfigState.config
-                            "Synced (${cfg.rawRootType}) • ${cfg.availableHeroes.size} heroes, ${cfg.skinEntries.size} skins • Maintenance=${cfg.maintenanceMode}"
+                            stringResource(
+                                R.string.synced_status,
+                                cfg.rawRootType,
+                                cfg.availableHeroes.size,
+                                cfg.skinEntries.size,
+                                stringResource(
+                                    if (cfg.maintenanceMode) R.string.boolean_true
+                                    else R.string.boolean_false
+                                ),
+                            )
                         }
                         is RemoteConfigState.Failed ->
-                            "Offline fallback (${remoteConfigState.errorMessage})"
+                            stringResource(R.string.offline_fallback, remoteConfigState.errorMessage)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -545,10 +707,10 @@ fun ConfirmClearBackupDialog(
                 tint = LocalSemanticColors.current.warning,
             )
         },
-        title = { Text("Clear Saved Backup?") },
+        title = { Text(stringResource(R.string.clear_backup_title)) },
         text = {
             Text(
-                text = "This removes the app-private backup files for '$skinName'. Make sure your original game assets are already intact before deleting the backup.",
+                text = stringResource(R.string.clear_backup_message, skinName),
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
@@ -557,12 +719,12 @@ fun ConfirmClearBackupDialog(
                 onClick = onConfirm,
                 modifier = Modifier.testTag("confirm_clear_backup_dialog_button"),
             ) {
-                Text("Clear Backup")
+                Text(stringResource(R.string.action_clear_backup))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         },
     )

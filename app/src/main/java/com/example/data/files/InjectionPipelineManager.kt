@@ -40,9 +40,16 @@ class InjectionPipelineManager(
                 throw IllegalStateException("Script '${script.skinName}' contains no target asset paths.")
             }
 
-            val stagedDir = File(script.stagedDirPath)
+            if (script.stagedDirPath.isBlank()) {
+                throw IllegalStateException("Staged bundle path is missing. Re-import or re-stage the bundle.")
+            }
+            val stagedRoot = File(context.filesDir, "staged_scripts").canonicalFile
+            val stagedDir = File(script.stagedDirPath).canonicalFile
             if (!stagedDir.exists() || !stagedDir.isDirectory) {
                 throw IllegalStateException("Staged bundle files are missing. Re-import or re-stage the bundle.")
+            }
+            if (!stagedDir.path.startsWith(stagedRoot.path + File.separator)) {
+                throw SecurityException("Staged bundle path is outside the app staging area.")
             }
 
             // Validate every staged file exists and is safe before touching Shizuku or target paths.
@@ -66,7 +73,10 @@ class InjectionPipelineManager(
             }
 
             val baseTargetDir = buildTargetPackageRoot(targetPackage)
-            val scriptBackupDir = File(backupRootDir, "${script.heroId}/${script.scriptId}").apply {
+            val scriptBackupDir = File(
+                backupRootDir,
+                "${safeSegment(script.heroId)}/${safeSegment(script.scriptId)}",
+            ).apply {
                 mkdirs()
             }
 
@@ -109,7 +119,9 @@ class InjectionPipelineManager(
                             )
                         }
                     }
-                    dao.upsertBackupEntries(backupManifest)
+                    if (backupManifest.isNotEmpty()) {
+                        dao.upsertBackupEntries(backupManifest)
+                    }
                 }
 
                 // Inject staged assets through Shizuku UserService.
@@ -130,8 +142,10 @@ class InjectionPipelineManager(
             onProgress(ScriptLifecycleState.Injected)
         }.onFailure { err ->
             val message = err.message ?: "Injection failed due to an unexpected I/O error."
-            dao.updateScriptStatus(scriptId = script.scriptId, status = "ERROR", errorMessage = message)
-            onProgress(ScriptLifecycleState.Error(message))
+            runCatching {
+                dao.updateScriptStatus(scriptId = script.scriptId, status = "ERROR", errorMessage = message)
+            }
+            runCatching { onProgress(ScriptLifecycleState.Error(message)) }
         }
     }
 
@@ -163,11 +177,17 @@ class InjectionPipelineManager(
                 val progress = (index + 1).toFloat() / entries.size.toFloat()
                 onProgress(ScriptLifecycleState.Restoring(progress, entry.relativePath))
 
-                val targetPath = "$baseTargetDir/${entry.relativePath}"
+                val safeRelativePath = ScriptArchiveManager.sanitizeRelativePath(entry.relativePath)
+                    ?: throw SecurityException("Invalid backup relative path: ${entry.relativePath}")
+                val targetPath = "$baseTargetDir/$safeRelativePath"
                 if (entry.existedBeforeInjection) {
-                    val backupFile = File(entry.backupFilePath)
+                    val backupRoot = backupRootDir.canonicalFile
+                    val backupFile = File(entry.backupFilePath).canonicalFile
+                    if (!backupFile.path.startsWith(backupRoot.path + File.separator)) {
+                        throw SecurityException("Backup file is outside the app backup area.")
+                    }
                     if (!backupFile.exists()) {
-                        throw IllegalStateException("Backup file missing: ${entry.relativePath}")
+                        throw IllegalStateException("Backup file missing: $safeRelativePath")
                     }
                     val targetParent = File(targetPath).parent
                     if (!targetParent.isNullOrBlank()) {
@@ -186,15 +206,21 @@ class InjectionPipelineManager(
         onProgress(ScriptLifecycleState.Selected)
     }.onFailure { err ->
         val message = err.message ?: "Restore failed."
-        dao.updateScriptStatus(scriptId = script.scriptId, status = "ERROR", errorMessage = message)
-        onProgress(ScriptLifecycleState.Error(message))
+        runCatching {
+            dao.updateScriptStatus(scriptId = script.scriptId, status = "ERROR", errorMessage = message)
+        }
+        runCatching { onProgress(ScriptLifecycleState.Error(message)) }
     }
 
     suspend fun clearBackupForScript(script: SkinScriptEntity): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val backupDir = File(backupRootDir, "${script.heroId}/${script.scriptId}")
-                if (backupDir.exists()) {
+                val backupRoot = backupRootDir.canonicalFile
+                val backupDir = File(
+                    backupRoot,
+                    "${safeSegment(script.heroId)}/${safeSegment(script.scriptId)}",
+                ).canonicalFile
+                if (backupDir.path.startsWith(backupRoot.path + File.separator) && backupDir.exists()) {
                     backupDir.deleteRecursively()
                 }
                 dao.deleteBackupEntriesForScript(script.scriptId)
@@ -231,6 +257,9 @@ class InjectionPipelineManager(
             }
         }
     }
+
+    private fun safeSegment(value: String): String =
+        ScriptArchiveManager.sanitizeFileSegment(value)
 
     companion object {
         fun buildTargetPackageRoot(targetPackage: String): String {
