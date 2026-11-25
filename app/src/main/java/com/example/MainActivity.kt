@@ -36,11 +36,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.localization.LocaleManager
@@ -83,24 +87,24 @@ class MainActivity : ComponentActivity() {
 
             MythicScriptTheme(darkTheme = true) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    when (status) {
-                        STATUS_CHECKING -> StatusScreen {
-                            CircularProgressIndicator(color = Color(0xFF3B82F6))
-                            Spacer(Modifier.height(16.dp))
-                            Text(stringResource(R.string.status_checking_connection), color = Color.White)
-                        }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            when (status) {
+                                STATUS_CHECKING -> StatusScreen {
+                                    CircularProgressIndicator(color = Color(0xFF3B82F6))
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(stringResource(R.string.status_checking_connection), color = Color.White)
+                                }
 
-                        STATUS_OFFLINE -> StatusScreen {
-                            Text(stringResource(R.string.status_no_internet), color = Color.White)
-                            Spacer(Modifier.height(16.dp))
-                            Button(onClick = { retryCount++ }) {
-                                Text(stringResource(R.string.action_retry))
-                            }
-                        }
+                                STATUS_OFFLINE -> StatusScreen {
+                                    Text(stringResource(R.string.status_no_internet), color = Color.White)
+                                    Spacer(Modifier.height(16.dp))
+                                    Button(onClick = { retryCount++ }) {
+                                        Text(stringResource(R.string.action_retry))
+                                    }
+                                }
 
-                        else -> Column(modifier = Modifier.fillMaxSize()) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                MythicScriptApp(
+                                else -> MythicScriptApp(
                                     viewModel = viewModel,
                                     onToggleLanguage = {
                                         LocaleManager.toggleLanguage(this@MainActivity)
@@ -108,8 +112,11 @@ class MainActivity : ComponentActivity() {
                                     },
                                 )
                             }
-                            UnityBanner(this@MainActivity)
                         }
+                        UnityBanner(
+                            activity = this@MainActivity,
+                            enabled = status == STATUS_ONLINE,
+                        )
                     }
                     if (BuildConfig.DEBUG) {
                         AdDebugOverlay(modifier = Modifier.align(Alignment.TopEnd))
@@ -155,9 +162,13 @@ private fun StatusScreen(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun UnityBanner(activity: Activity) {
+internal fun UnityBanner(activity: Activity, enabled: Boolean) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val initialized by UnityAdManager.isInitialized.collectAsStateWithLifecycle()
     var loadAttempts by remember(activity) { mutableIntStateOf(0) }
+    var bannerLoaded by remember(activity) { mutableStateOf(false) }
+    var bannerLoading by remember(activity) { mutableStateOf(false) }
+    var listenerAttached by remember(activity) { mutableStateOf(false) }
     val banner = remember(activity) {
         BannerView(
             activity,
@@ -167,30 +178,29 @@ private fun UnityBanner(activity: Activity) {
     }
 
     fun requestBannerLoad() {
+        if (!enabled || !initialized || !listenerAttached || bannerLoaded || bannerLoading) return
         if (loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS) return
         loadAttempts++
+        bannerLoading = true
         UnityAdManager.onBannerLoading()
         runCatching { banner.load() }
             .onFailure { error ->
+                bannerLoading = false
                 UnityAdManager.onBannerFailed("LOAD_EXCEPTION", error.message.orEmpty())
-                if (loadAttempts < BANNER_MAX_LOAD_ATTEMPTS && banner.parent != null) {
-                    banner.postDelayed(
-                        {
-                            if (banner.parent != null) requestBannerLoad()
-                        },
-                        BANNER_RETRY_DELAY_MS,
-                    )
-                }
             }
     }
 
     DisposableEffect(activity) {
         banner.setListener(object : BannerView.IListener {
             override fun onBannerLoaded(banner: BannerView) {
+                bannerLoaded = true
+                bannerLoading = false
                 UnityAdManager.onBannerLoaded()
             }
 
             override fun onBannerShown(banner: BannerView) {
+                bannerLoaded = true
+                bannerLoading = false
                 UnityAdManager.onBannerShown()
             }
 
@@ -200,22 +210,17 @@ private fun UnityBanner(activity: Activity) {
                 banner: BannerView,
                 errorInfo: BannerErrorInfo,
             ) {
+                bannerLoaded = false
+                bannerLoading = false
                 UnityAdManager.onBannerFailed(
                     errorInfo.errorCode.toString(),
                     errorInfo.errorMessage.orEmpty(),
                 )
-                if (loadAttempts < BANNER_MAX_LOAD_ATTEMPTS && banner.parent != null) {
-                    banner.postDelayed(
-                        {
-                            if (banner.parent != null) requestBannerLoad()
-                        },
-                        BANNER_RETRY_DELAY_MS,
-                    )
-                }
             }
 
             override fun onBannerLeftApplication(banner: BannerView) = Unit
         })
+        listenerAttached = true
 
         onDispose {
             runCatching { banner.setListener(null) }
@@ -223,26 +228,52 @@ private fun UnityBanner(activity: Activity) {
         }
     }
 
-    LaunchedEffect(initialized, activity) {
-        if (initialized && loadAttempts == 0) {
+    // Only load after Unity initialization completes and the screen has passed its
+    // connectivity gate. Calling load() earlier can be silently dropped by the SDK.
+    LaunchedEffect(enabled, initialized, listenerAttached, activity) {
+        if (enabled && initialized && listenerAttached && !bannerLoaded && !bannerLoading) {
+            if (loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS) loadAttempts = 0
             requestBannerLoad()
         }
     }
 
-    // BannerView.load() also initializes the SDK. If the init callback is delayed or lost,
-    // this fallback still gives the banner a chance to load instead of staying blank forever.
-    LaunchedEffect(activity) {
-        delay(BANNER_INIT_FALLBACK_DELAY_MS)
-        if (loadAttempts == 0) {
+    // A load can fail to produce either callback (especially on a flaky network).
+    // Retry a bounded number of times, then leave the container in place.
+    LaunchedEffect(enabled, initialized, listenerAttached, activity, loadAttempts) {
+        if (!enabled || !initialized || !listenerAttached || bannerLoaded || loadAttempts == 0 ||
+            loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS
+        ) {
+            return@LaunchedEffect
+        }
+        delay(BANNER_RETRY_DELAY_MS)
+        if (enabled && !bannerLoaded && initialized && listenerAttached &&
+            loadAttempts < BANNER_MAX_LOAD_ATTEMPTS
+        ) {
+            bannerLoading = false
             requestBannerLoad()
         }
+    }
+
+    // Re-check when the user returns to the screen, but never reload a shown banner.
+    DisposableEffect(lifecycleOwner, activity, enabled) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && enabled && initialized && listenerAttached &&
+                !bannerLoaded && !bannerLoading
+            ) {
+                if (loadAttempts >= BANNER_MAX_LOAD_ATTEMPTS) loadAttempts = 0
+                requestBannerLoad()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .testTag("unity_banner_container"),
         contentAlignment = Alignment.Center,
     ) {
         AndroidView(
@@ -267,7 +298,6 @@ private fun UnityBanner(activity: Activity) {
 
 private const val BANNER_MAX_LOAD_ATTEMPTS = 3
 private const val BANNER_RETRY_DELAY_MS = 15_000L
-private const val BANNER_INIT_FALLBACK_DELAY_MS = 8_000L
 
 @Composable
 private fun AdDebugOverlay(modifier: Modifier = Modifier) {
