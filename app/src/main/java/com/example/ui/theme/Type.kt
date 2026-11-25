@@ -109,17 +109,26 @@ val Typography = Typography(
     ),
 )
 
+private fun TextStyle.burmeseStyle(): TextStyle = copy(
+    fontFamily = FontFamily.Default,
+    lineHeight = (fontSize.value * 1.5f).sp,
+    letterSpacing = 0.sp,
+)
+
 val BurmeseTypography = Typography(
-    displaySmall = Typography.displaySmall.copy(fontFamily = FontFamily.Default),
-    headlineMedium = Typography.headlineMedium.copy(fontFamily = FontFamily.Default),
-    headlineSmall = Typography.headlineSmall.copy(fontFamily = FontFamily.Default),
-    titleLarge = Typography.titleLarge.copy(fontFamily = FontFamily.Default),
-    titleMedium = Typography.titleMedium.copy(fontFamily = FontFamily.Default),
-    titleSmall = Typography.titleSmall.copy(fontFamily = FontFamily.Default),
-    bodyLarge = Typography.bodyLarge.copy(fontFamily = FontFamily.Default),
-    bodyMedium = Typography.bodyMedium.copy(fontFamily = FontFamily.Default),
-    bodySmall = Typography.bodySmall.copy(fontFamily = FontFamily.Default),
-    labelLarge = Typography.labelLarge.copy(fontFamily = FontFamily.Default),
-    labelMedium = Typography.labelMedium.copy(fontFamily = FontFamily.Default),
-    labelSmall = Typography.labelSmall.copy(fontFamily = FontFamily.Default),
+    displayLarge = Typography.displayLarge.burmeseStyle(),
+    displayMedium = Typography.displayMedium.burmeseStyle(),
+    displaySmall = Typography.displaySmall.burmeseStyle(),
+    headlineLarge = Typography.headlineLarge.burmeseStyle(),
+    headlineMedium = Typography.headlineMedium.burmeseStyle(),
+    headlineSmall = Typography.headlineSmall.burmeseStyle(),
+    titleLarge = Typography.titleLarge.burmeseStyle(),
+    titleMedium = Typography.titleMedium.burmeseStyle(),
+    titleSmall = Typography.titleSmall.burmeseStyle(),
+    bodyLarge = Typography.bodyLarge.burmeseStyle(),
+    bodyMedium = Typography.bodyMedium.burmeseStyle(),
+    bodySmall = Typography.bodySmall.burmeseStyle(),
+    labelLarge = Typography.labelLarge.burmeseStyle(),
+    labelMedium = Typography.labelMedium.burmeseStyle(),
+    labelSmall = Typography.labelSmall.burmeseStyle(),
 )

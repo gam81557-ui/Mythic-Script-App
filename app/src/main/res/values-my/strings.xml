@@ -8,9 +8,9 @@
     <string name="disclaimer_body">တရားဝင်မဟုတ်သော စကင်စကရစ်ပ်များသည် /Android/data/ အောက်ရှိ ဒေသတွင်း ဖိုင်များကို ပြောင်းလဲသည်။ ဂိမ်း ဂရိုးဝပ်တား စစ်ဆေးမှုများ သို့မဟုတ် အန်တီတမ်ပါ အပ်ဒိတ်များက ဖိုင်များကို ပြန်လည်ပြောင်းလဲနိုင်ပြီး အကောင့်ပိတ်ခံရနိုင်သည်။ မပြောင်းလဲမီ မူရင်းဖိုင်များကို အမြဲတမ်း အရန်ကူးယူထားပါ။</string>
     <string name="action_inject_selected">ရွေးထားသည်ကို ထည့်သွင်းပါ</string>
     <string name="action_reinject">ပြန်လည်ထည့်သွင်းပါ</string>
-    <string name="action_restore_original">မူရင်းပြန်လည်ထားပါ</string>
-    <string name="action_clear_backup">အရန်ကူးယူမှု ရှင်းပါ</string>
-    <string name="action_import_zip">.zip တင်သွင်းပါ</string>
+    <string name="action_restore_original">မူရင်းအတိုင်း ပြန်ထားပါ</string>
+    <string name="action_clear_backup">အရန်ကူးယူမှုကို ရှင်းပါ</string>
+    <string name="action_import_zip">.zip ဖိုင်ကို တင်သွင်းပါ</string>
     <string name="action_download_skin">ဒေါင်းလုဒ်</string>
     <string name="shizuku_setup_title">Shizuku အထူးအခွင့်အရေး တံတား</string>
     <string name="cd_back_to_heroes">ဟီးရိုးစာရင်းသို့ ပြန်သွားပါ</string>
@@ -37,10 +37,10 @@
     <string name="active">လက်ရှိ</string>
 
     <string name="role_show_all">အားလုံးပြ</string>
-    <string name="role_assassin">အသတ်သမား</string>
+    <string name="role_assassin">လုပ်ကြံသမား</string>
     <string name="role_fighter">တိုက်ခိုက်သူ</string>
     <string name="role_mage">မှော်ဆရာ</string>
-    <string name="role_marksman">မားခ်စ်မန်း</string>
+    <string name="role_marksman">အဝေးပစ်သမား</string>
     <string name="role_tank">တင့်</string>
     <string name="role_support">အထောက်အပံ့</string>
 
@@ -87,12 +87,12 @@
     <string name="action_fix_shizuku">Shizuku ပြင်ဆင်ပါ</string>
 
     <string name="status_idle">မလှုပ်ရှားပါ / မထည့်သွင်းရသေးပါ</string>
-    <string name="status_selected">ရွေးထားသည် (ထည့်သွင်းရန် အသင့်)</string>
+    <string name="status_selected">ရွေးချယ်ထားသည် (ထည့်သွင်းရန် အသင့်)</string>
     <string name="status_downloading">ဒေါင်းလုဒ်လုပ်နေသည်</string>
-    <string name="status_downloaded">ဒေါင်းလုဒ်လုပ်ပြီး</string>
+    <string name="status_downloaded">ဒေါင်းလုဒ်လုပ်ပြီးပါပြီ</string>
     <string name="status_backing_up">မူရင်း အရန်ကူးယူနေသည်</string>
     <string name="status_injecting">ထည့်သွင်းနေသည်</string>
-    <string name="status_injected">ထည့်သွင်းပြီး / လက်ရှိ</string>
+    <string name="status_injected">ထည့်သွင်းပြီးပါပြီ / လက်ရှိ</string>
     <string name="status_restoring">ပြန်လည်ထားနေသည်</string>
     <string name="status_failed">မအောင်မြင်ပါ</string>
     <string name="status_unavailable">မရနိုင်ပါ (%1$d)</string>
@@ -140,12 +140,12 @@
     <string name="invalid_package">တရားဝင် Android အက်ပ်လီကေးရှင်း ID ထည့်ပါ (ဥပမာ com.mobile.legends)</string>
     <string name="package_detected">စက်ပစ္စည်းတွင် ပက်ကေ့ချ် တွေ့ရှိသည်</string>
     <string name="package_not_detected">PackageManager မှ ပက်ကေ့ချ် မတွေ့ပါ (စိတ်ကြိုက်လမ်းကြောင်း ပြောင်းလဲမှု ရနိုင်ဆဲ)</string>
-    <string name="action_save_target_package">ပစ်မှတ်ပက်ကေ့ချ် သိမ်းပါ</string>
+    <string name="action_save_target_package">ပစ်မှတ်ပက်ကေ့ချ်ကို သိမ်းဆည်းပါ</string>
     <string name="app_private_backup">အက်ပ် ကိုယ်ပိုင် အရန်သိမ်းဆည်းမှု</string>
     <string name="stored_size">%1$s သိမ်းထားသည်</string>
     <string name="action_show_banner">ဘန်နာ ပြပါ</string>
     <string name="github_remote_config">GitHub အဝေးမှ ဖွဲ့စည်းမှု</string>
-    <string name="action_sync_config">ဖွဲ့စည်းမှု ထပ်တူပြုပါ</string>
+    <string name="action_sync_config">ဖွဲ့စည်းမှုကို ထပ်တူပြုပါ</string>
     <string name="fetching_remote">GitHub Raw မှ နောက်ဆုံး အဝေးမှအချက်များကို ရယူနေသည်…</string>
     <string name="synced_status">ထပ်တူပြုပြီး (%1$s) • ဟီးရိုး %2$d၊ စကင် %3$d • ပြုပြင်ထိန်းသိမ်းမှု=%4$s</string>
     <string name="boolean_true">ဟုတ်</string>
@@ -166,7 +166,7 @@
     <string name="maintenance_default_message">ပြုပြင်ထိန်းသိမ်းမှုကြောင့် စကင်ထည့်သွင်းမှုနှင့် အဝေးမှဒေါင်းလုဒ်များ ယာယီမရနိုင်ပါ။</string>
     <string name="action_restore_only">မူရင်းပြန်ထားရန်သာ</string>
 
-    <string name="msg_config_synced">ဖွဲ့စည်းမှု ထပ်တူပြုပြီး</string>
+    <string name="msg_config_synced">ဖွဲ့စည်းမှု ထပ်တူပြုပြီးပါပြီ။</string>
     <string name="msg_maintenance_active">ပြုပြင်ထိန်းသိမ်းမှု လုပ်ဆောင်နေသည်</string>
     <string name="msg_config_summary">%1$s • ဟီးရိုး %2$d၊ စကင် %3$d</string>
     <string name="msg_unable_remote_config">အဝေးမှ ဖွဲ့စည်းမှုကို မရောက်နိုင်ပါ။</string>
@@ -196,7 +196,7 @@
     <string name="msg_staged">‘%1$s’ ကို အဆင့်သတ်မှတ်ပြီး (ဖိုင် %2$d ခု)။</string>
     <string name="msg_removed">‘%1$s’ ကို ဖယ်ရှားပြီးပါပြီ။</string>
     <string name="msg_delete_failed">စကရစ်ပ်ကို ဖျက်၍ မရပါ။</string>
-    <string name="msg_target_package_set">ပစ်မှတ်ပက်ကေ့ချ်ကို %1$s သို့ သတ်မှတ်ပြီး</string>
+    <string name="msg_target_package_set">ပစ်မှတ်ပက်ကေ့ချ်ကို %1$s သို့ သတ်မှတ်ပြီးပါပြီ။</string>
     <string name="msg_invalid_package">ပက်ကေ့ချ်အမည် မမှန်ပါ။</string>
     <string name="msg_selected_script">ရွေးထားသော စကရစ်ပ်</string>
     <string name="dynamic_hero_title">စကင် %1$d ခု</string>
@@ -218,16 +218,16 @@
     <string name="error_restore_before_clear">ဤလက်ရှိအရန်ကို မရှင်းမီ မူရင်းဖိုင်များကို ပြန်ထားပါ။</string>
     <string name="error_no_download_url">ဤစကင်အတွက် ဒေါင်းလုဒ်လင့်ခ် သတ်မှတ်မထားပါ။</string>
     <string name="error_download_http">ဒေါင်းလုဒ် မအောင်မြင်ပါ (HTTP %1$s)။</string>
-    <string name="error_web_page">ဟိုစတ်သည် ဒေါင်းလုဒ်အစုအစား ဝဘ်စာမျက်နှာကို ပြန်ပေးခဲ့သည်။</string>
+    <string name="error_web_page">ဆာဗာသည် ဒေါင်းလုဒ်အစုအစား ဝဘ်စာမျက်နှာကို ပြန်ပေးခဲ့သည်။</string>
     <string name="error_empty_file">ဒေါင်းလုဒ်ဖိုင် ဗလာဖြစ်နေသည် (0 bytes)။</string>
-    <string name="error_html_file">ဟိုစတ်သည် စကင်ဖိုင်အစား HTML စာမျက်နှာကို ပြန်ပေးခဲ့သည်။</string>
+    <string name="error_html_file">ဆာဗာသည် စကင်ဖိုင်အစား HTML စာမျက်နှာကို ပြန်ပေးခဲ့သည်။</string>
     <string name="error_no_direct_stream">တိုက်ရိုက်ဒေါင်းလုဒ်လမ်းကြောင်းကို ရှာမတွေ့ပါ။</string>
     <string name="error_no_extractable_files">ဒေါင်းလုဒ်အစုတွင် ထုတ်ယူနိုင်သော စကင်ဖိုင်များ မပါဝင်ပါ။</string>
-    <string name="shizuku_reason_binder_null">Binder မျက်နှာပြင် ဗလာပြန်ပေးခဲ့သည်</string>
+    <string name="shizuku_reason_binder_null">Binder အင်တာဖေ့စ်က null ပြန်ပေးခဲ့သည်</string>
     <string name="shizuku_reason_process_disconnected">UserService လုပ်ငန်းစဉ် ချိတ်ဆက်မှု ပြတ်တောက်သည်</string>
     <string name="shizuku_reason_binder_stopped">Shizuku binder ရပ်တန့်သွားသည်</string>
     <string name="shizuku_reason_bind_failed">UserService ကို ချိတ်ဆက်၍ မရပါ</string>
-    <string name="shizuku_reason_unbound">ဝန်ဆောင်မှု ချိတ်ဆက်မှု ဖြုတ်ပြီး</string>
+    <string name="shizuku_reason_unbound">ဝန်ဆောင်မှု ချိတ်ဆက်မှု ဖြုတ်ထားသည်</string>
     <string name="shizuku_reason_not_connected">UserService မချိတ်ဆက်ထားပါ</string>
     <string name="msg_status_failed">မအောင်မြင်ပါ</string>
 </resources>

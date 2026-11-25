@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -148,11 +149,13 @@ private fun LanguageToggle(
 ) {
     val languageDescription = stringResource(R.string.cd_language_toggle)
     Surface(
+        onClick = onToggleLanguage,
         shape = RoundedCornerShape(50),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier
             .padding(end = 6.dp)
+            .minimumInteractiveComponentSize()
             .semantics { contentDescription = languageDescription }
             .testTag("language_toggle"),
     ) {
@@ -160,16 +163,14 @@ private fun LanguageToggle(
             modifier = Modifier.padding(2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            LanguageOption(
+            LanguageBadge(
                 label = stringResource(R.string.language_english),
                 selected = !isBurmese,
-                onClick = { if (isBurmese) onToggleLanguage() },
                 testTag = "language_toggle_en",
             )
-            LanguageOption(
+            LanguageBadge(
                 label = stringResource(R.string.language_burmese),
                 selected = isBurmese,
-                onClick = { if (!isBurmese) onToggleLanguage() },
                 testTag = "language_toggle_mm",
             )
         }
@@ -177,27 +178,24 @@ private fun LanguageToggle(
 }
 
 @Composable
-private fun LanguageOption(
+private fun LanguageBadge(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
     testTag: String,
 ) {
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(50),
         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier
-            .minimumInteractiveComponentSize()
-            .testTag(testTag),
+        modifier = Modifier.testTag(testTag),
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
         )
     }
 }
@@ -254,6 +252,8 @@ fun ShizukuStatusPill(
         color = bgColor,
         modifier = modifier
             .padding(end = 4.dp)
+            .minimumInteractiveComponentSize()
+            .widthIn(max = 132.dp)
             .testTag("shizuku_status_pill"),
     ) {
         Row(
@@ -273,6 +273,7 @@ fun ShizukuStatusPill(
                 color = fgColor,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

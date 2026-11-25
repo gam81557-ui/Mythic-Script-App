@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,6 +75,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
@@ -129,7 +131,14 @@ fun HeroDetailPane(
                 Tab(
                     selected = tab == activeTab,
                     onClick = { onTabSelected(tab) },
-                    text = { Text(text = tab.localizedLabel()) },
+                    text = {
+                        Text(
+                            text = tab.localizedLabel(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    },
                     modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
                 )
             }
@@ -229,17 +238,22 @@ private fun HeroBannerHeader(
                         text = hero.name,
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "${hero.title} • ${hero.lane}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFCBD5E1),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (activeScript != null) {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = semantic.activeContainer,
+                        modifier = Modifier.widthIn(max = 140.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.active_script_prefix, activeScript.skinName),
@@ -272,11 +286,14 @@ private fun BannerTagChip(text: String) {
         shape = RoundedCornerShape(8.dp),
         color = Color(0x33FFFFFF),
         border = BorderStroke(1.dp, Color(0x4DFFFFFF)),
+        modifier = Modifier.widthIn(max = 180.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
         )
     }
