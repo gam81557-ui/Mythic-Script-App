@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.webkit.WebView
+import com.example.BuildConfig
 import com.unity3d.ads.IUnityAdsInitializationListener
 import com.unity3d.ads.IUnityAdsLoadListener
 import com.unity3d.ads.IUnityAdsShowListener
@@ -44,8 +45,8 @@ object UnityAdManager {
     const val BANNER_PLACEMENT = "BP_Banner_Android"
 
     private const val TAG = "UnityAdManager"
-    // TEMPORARY: enabled for QA to validate Unity test ads. Must be false for release.
-    private const val TEST_MODE = true
+    // Unity test mode is debug-only; release builds always use production ads.
+    private val TEST_MODE = BuildConfig.DEBUG
     private const val LOAD_TIMEOUT_MS = 12_000L
     // 4.22 initializes through the native gateway. Give it enough time for a slow
     // first-run device-info/consent round trip without hiding a real callback failure.
@@ -56,8 +57,6 @@ object UnityAdManager {
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
-
-    val testModeEnabled: Boolean get() = TEST_MODE
 
     private val _debugState = MutableStateFlow(UnityAdDebugState())
     val debugState: StateFlow<UnityAdDebugState> = _debugState.asStateFlow()
@@ -256,7 +255,7 @@ object UnityAdManager {
                 "ctx=${context.javaClass.name} sdkInit=${UnityAds.isInitialized} " +
                 "supported=${UnityAds.isSupported} version=${UnityAds.version}",
         )
-        UnityAds.debugMode = true // TEMPORARY: QA only; set back to false for release.
+        UnityAds.debugMode = TEST_MODE
         val listener = object : IUnityAdsInitializationListener {
             override fun onInitializationComplete() {
                 Log.i(

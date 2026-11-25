@@ -63,7 +63,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val viewModel: CompanionViewModel = viewModel()
-            val adDebug by UnityAdManager.debugState.collectAsStateWithLifecycle()
             var status by remember { mutableIntStateOf(STATUS_CHECKING) }
             var retryCount by remember { mutableIntStateOf(0) }
 
@@ -99,11 +98,8 @@ class MainActivity : ComponentActivity() {
                             UnityBanner()
                         }
                     }
-                    if (UnityAdManager.testModeEnabled) {
-                        AdDebugPanel(
-                            state = adDebug,
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        )
+                    if (BuildConfig.DEBUG) {
+                        AdDebugOverlay(modifier = Modifier.align(Alignment.TopEnd))
                     }
                 }
             }
@@ -223,6 +219,12 @@ private fun UnityBanner() {
             )
         }
     }
+}
+
+@Composable
+private fun AdDebugOverlay(modifier: Modifier = Modifier) {
+    val state by UnityAdManager.debugState.collectAsStateWithLifecycle()
+    AdDebugPanel(state = state, modifier = modifier)
 }
 
 @Composable
