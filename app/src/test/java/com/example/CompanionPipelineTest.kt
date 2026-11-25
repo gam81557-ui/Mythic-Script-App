@@ -34,6 +34,7 @@ import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -96,6 +97,41 @@ class CompanionPipelineTest {
         assertEquals(listOf("files/dragon2017/assets/Art/Android/test_skin.unity3d"), extracted)
         assertTrue(File(stagingDir, "files/dragon2017/assets/Art/Android/test_skin.unity3d").exists())
         stagingDir.deleteRecursively()
+    }
+
+    @Test
+    fun `archive manager rejects oversized manifests and unsafe file segments`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = ScriptArchiveManager(context)
+        val stagingDir = File(context.cacheDir, "test_stage_limit_${System.nanoTime()}").apply { mkdirs() }
+
+        assertEquals("script", ScriptArchiveManager.sanitizeFileSegment(".."))
+        assertEquals("script", ScriptArchiveManager.sanitizeFileSegment("."))
+
+        val zipBytes = ByteArrayOutputStream().use { baos ->
+            ZipOutputStream(baos).use { zos ->
+                zos.putNextEntry(ZipEntry("manifest.json"))
+                zos.write(ByteArray(ScriptArchiveManager.MAX_MANIFEST_BYTES + 1))
+                zos.closeEntry()
+            }
+            baos.toByteArray()
+        }
+
+        var rejected = false
+        try {
+            manager.extractZipStreamSafely(
+                inputStream = ByteArrayInputStream(zipBytes),
+                stagingDir = stagingDir,
+                onManifestFound = {},
+                onFileExtracted = { _, _ -> },
+            )
+        } catch (error: IOException) {
+            rejected = true
+            assertTrue(error.message.orEmpty().contains("size limit"))
+        } finally {
+            stagingDir.deleteRecursively()
+        }
+        assertTrue("Oversized manifest should be rejected", rejected)
     }
 
     @Test
@@ -164,10 +200,10 @@ class CompanionPipelineTest {
 
         vm.applyRemoteConfigForTest(parsed)
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodes(hasTestTag("maintenance_dialog_title")).fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodes(hasTestTag("notice_dialog_title")).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithTag("maintenance_dialog_message").assertIsDisplayed()
-        composeRule.onNodeWithTag("maintenance_dismiss_button").performClick()
+        composeRule.onNodeWithTag("notice_dialog_message").assertIsDisplayed()
+        composeRule.onNodeWithTag("notice_got_it_button").performClick()
         composeRule.waitForIdle()
 
         // Filter Show All & Fighter to verify HeroRoleMapper discovers Dyrroth

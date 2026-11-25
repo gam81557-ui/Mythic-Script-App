@@ -31,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -50,13 +49,9 @@ import com.example.R
 import com.example.domain.model.HeroProfile
 import com.example.domain.model.HeroRole
 import com.example.data.catalog.HeroPortraitProvider
+import com.example.localization.localizedLabel
 
-private val DarkGridCanvas = Color(0xFF0B101B)
-private val DarkSearchSurface = Color(0xFF141C2E)
-private val DarkCardSurface = Color(0xFF161F33)
-private val DarkCardBorder = Color(0xFF283550)
 private val ActiveGreen = Color(0xFF10B981)
-private val SelectedBlue = Color(0xFF3B82F6)
 
 @Composable
 fun HeroRosterPane(
@@ -71,7 +66,7 @@ fun HeroRosterPane(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        color = DarkGridCanvas,
+        color = Color.Transparent,
         modifier = modifier.fillMaxSize(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -81,11 +76,17 @@ fun HeroRosterPane(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 4.dp,
+                        opacity = 0.96f,
+                    )
                     .testTag("hero_search_input"),
                 placeholder = {
                     Text(
                         text = stringResource(R.string.search_heroes_hint),
-                        color = Color(0xFF94A3B8),
+                        color = LiquidGlass.Muted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -94,7 +95,7 @@ fun HeroRosterPane(
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = null,
-                        tint = Color(0xFF94A3B8),
+                        tint = LiquidGlass.Muted,
                     )
                 },
                 trailingIcon = {
@@ -107,23 +108,15 @@ fun HeroRosterPane(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Clear,
-                                contentDescription = "Clear search",
-                                tint = Color(0xFFCBD5E1),
+                                contentDescription = stringResource(R.string.clear_search),
+                                tint = LiquidGlass.Ink,
                             )
                         }
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = DarkSearchSurface,
-                    unfocusedContainerColor = DarkSearchSurface,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = SelectedBlue,
-                    unfocusedBorderColor = DarkCardBorder,
-                    cursorColor = SelectedBlue,
-                ),
+                shape = RoundedCornerShape(20.dp),
+                colors = glassTextFieldColors(),
             )
 
             Row(
@@ -140,22 +133,23 @@ fun HeroRosterPane(
                         onClick = { onRoleSelected(role) },
                         label = {
                             Text(
-                                text = role.label,
+                                text = role.localizedLabel(),
                                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = DarkSearchSurface,
-                            labelColor = Color(0xFFCBD5E1),
-                            selectedContainerColor = SelectedBlue,
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            labelColor = LiquidGlass.Ink,
+                            selectedContainerColor = LiquidGlass.Teal,
                             selectedLabelColor = Color.White,
                         ),
                         border = FilterChipDefaults.filterChipBorder(
                             enabled = true,
                             selected = selected,
-                            borderColor = DarkCardBorder,
-                            selectedBorderColor = SelectedBlue,
+                            borderColor = LiquidGlass.Hairline,
+                            selectedBorderColor = Color.White.copy(alpha = 0.72f),
                         ),
+                        shape = RoundedCornerShape(50),
                         modifier = Modifier.testTag("role_chip_${role.name.lowercase()}"),
                     )
                 }
@@ -176,17 +170,18 @@ fun HeroRosterPane(
                             imageVector = Icons.Filled.Shield,
                             contentDescription = null,
                             modifier = Modifier.size(40.dp),
-                            tint = Color(0xFF94A3B8),
+                            tint = LiquidGlass.Muted,
                         )
                         Text(
-                            text = "No matching heroes found",
+                            text = stringResource(R.string.no_matching_heroes),
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            color = LiquidGlass.Ink,
                         )
                         Text(
-                            text = "Try clearing the search term or tapping Show All.",
+                            text = stringResource(R.string.no_matching_heroes_hint),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF94A3B8),
+                            color = LiquidGlass.Muted,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -224,15 +219,15 @@ private fun HeroGridCard(
 ) {
     val borderStroke = when {
         hasActiveScript -> BorderStroke(2.dp, ActiveGreen)
-        isSelected -> BorderStroke(2.dp, SelectedBlue)
-        else -> BorderStroke(1.dp, DarkCardBorder)
+        isSelected -> BorderStroke(2.dp, LiquidGlass.Teal)
+        else -> BorderStroke(1.dp, Color.White.copy(alpha = 0.62f))
     }
 
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(22.dp),
         border = borderStroke,
-        colors = CardDefaults.cardColors(containerColor = DarkCardSurface),
+        colors = CardDefaults.cardColors(containerColor = LiquidGlass.Surface),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -247,7 +242,7 @@ private fun HeroGridCard(
                 primaryUrl = heroPortrait,
                 fallbackUrl = heroFallback,
                 label = hero.name,
-                contentDescription = "${hero.name} portrait",
+                contentDescription = stringResource(R.string.hero_portrait, hero.name),
                 accentColor = roleAccentColor(hero.role),
                 modifier = Modifier.fillMaxSize(),
             )
@@ -284,7 +279,7 @@ private fun HeroGridCard(
                     )
                     if (hero.role != HeroRole.ALL) {
                         Text(
-                            text = hero.role.label,
+                            text = hero.role.localizedLabel(),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF94A3B8),
                             maxLines = 1,
@@ -309,12 +304,12 @@ private fun HeroGridCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = "Active script injected",
+                            contentDescription = stringResource(R.string.active_script_injected),
                             tint = Color.White,
                             modifier = Modifier.size(11.dp),
                         )
                         Text(
-                            text = "Active",
+                            text = stringResource(R.string.active),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
@@ -323,8 +318,9 @@ private fun HeroGridCard(
                 }
             } else if (hero.skinCount > 0) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xCC0B101B),
+                    shape = RoundedCornerShape(50),
+                    color = LiquidGlass.SurfaceStrong,
+                    border = BorderStroke(1.dp, LiquidGlass.Hairline),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp),
@@ -332,9 +328,9 @@ private fun HeroGridCard(
                     Text(
                         text = "${hero.skinCount}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFE2E8F0),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = LiquidGlass.Ink,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                     )
                 }
             }

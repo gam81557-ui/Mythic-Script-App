@@ -108,3 +108,27 @@ val Typography = Typography(
         letterSpacing = 0.2.sp,
     ),
 )
+
+private fun TextStyle.burmeseStyle(): TextStyle = copy(
+    fontFamily = FontFamily.Default,
+    lineHeight = (fontSize.value * 1.5f).sp,
+    letterSpacing = 0.sp,
+)
+
+val BurmeseTypography = Typography(
+    displayLarge = Typography.displayLarge.burmeseStyle(),
+    displayMedium = Typography.displayMedium.burmeseStyle(),
+    displaySmall = Typography.displaySmall.burmeseStyle(),
+    headlineLarge = Typography.headlineLarge.burmeseStyle(),
+    headlineMedium = Typography.headlineMedium.burmeseStyle(),
+    headlineSmall = Typography.headlineSmall.burmeseStyle(),
+    titleLarge = Typography.titleLarge.burmeseStyle(),
+    titleMedium = Typography.titleMedium.burmeseStyle(),
+    titleSmall = Typography.titleSmall.burmeseStyle(),
+    bodyLarge = Typography.bodyLarge.burmeseStyle(),
+    bodyMedium = Typography.bodyMedium.burmeseStyle(),
+    bodySmall = Typography.bodySmall.burmeseStyle(),
+    labelLarge = Typography.labelLarge.burmeseStyle(),
+    labelMedium = Typography.labelMedium.burmeseStyle(),
+    labelSmall = Typography.labelSmall.burmeseStyle(),
+)

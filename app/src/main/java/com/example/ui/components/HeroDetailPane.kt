@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,8 +76,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.HeroDetailTab
@@ -83,6 +87,8 @@ import com.example.domain.model.HeroProfile
 import com.example.domain.model.HeroRole
 import com.example.domain.model.ScriptLifecycleState
 import com.example.domain.model.SkinScriptItem
+import com.example.localization.localizedLabel
+import com.example.localization.localizedShortLabel
 import com.example.shizuku.ShizukuConnectionState
 import com.example.ui.theme.LocalSemanticColors
 
@@ -119,17 +125,39 @@ fun HeroDetailPane(
             activeScript = scripts.firstOrNull { it.lifecycleState is ScriptLifecycleState.Injected },
         )
 
-        PrimaryTabRow(
-            selectedTabIndex = activeTab.ordinal,
-            containerColor = MaterialTheme.colorScheme.surface,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .liquidGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    tint = LiquidGlass.Surface,
+                    elevation = 4.dp,
+                    opacity = 0.96f,
+                ),
         ) {
-            HeroDetailTab.entries.forEach { tab ->
-                Tab(
-                    selected = tab == activeTab,
-                    onClick = { onTabSelected(tab) },
-                    text = { Text(text = tab.label) },
-                    modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
-                )
+            PrimaryTabRow(
+                selectedTabIndex = activeTab.ordinal,
+                containerColor = Color.Transparent,
+            ) {
+                HeroDetailTab.entries.forEach { tab ->
+                    Tab(
+                        selected = tab == activeTab,
+                        onClick = { onTabSelected(tab) },
+                        selectedContentColor = LiquidGlass.TealDeep,
+                        unselectedContentColor = LiquidGlass.Muted,
+                        text = {
+                            Text(
+                                text = tab.localizedLabel(),
+                                fontWeight = if (tab == activeTab) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        },
+                        modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
+                    )
+                }
             }
         }
 
@@ -175,11 +203,13 @@ private fun HeroBannerHeader(
     activeScript: SkinScriptItem?,
 ) {
     val semantic = LocalSemanticColors.current
+    val bannerShape = RoundedCornerShape(24.dp)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp)),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(bannerShape)
+            .border(1.dp, Color.White.copy(alpha = 0.68f), bannerShape),
     ) {
         Image(
             painter = painterResource(id = R.drawable.img_companion_banner),
@@ -216,7 +246,7 @@ private fun HeroBannerHeader(
                         primaryUrl = hero.previewImageUrl,
                         fallbackUrl = hero.fallbackImageUrl,
                         label = hero.name,
-                        contentDescription = "${hero.name} preview portrait",
+                        contentDescription = stringResource(R.string.hero_portrait, hero.name),
                         modifier = Modifier
                             .size(52.dp)
                             .clip(RoundedCornerShape(12.dp)),
@@ -227,20 +257,25 @@ private fun HeroBannerHeader(
                         text = hero.name,
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = "${hero.title} • ${hero.lane}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFCBD5E1),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (activeScript != null) {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = semantic.activeContainer,
+                        modifier = Modifier.widthIn(max = 140.dp),
                     ) {
                         Text(
-                            text = "Active: ${activeScript.skinName}",
+                            text = stringResource(R.string.active_script_prefix, activeScript.skinName),
                             style = MaterialTheme.typography.labelMedium,
                             color = semantic.active,
                             fontWeight = FontWeight.SemiBold,
@@ -256,8 +291,8 @@ private fun HeroBannerHeader(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                BannerTagChip(text = if (hero.role == HeroRole.ALL) "MLBB" else hero.role.label)
-                hero.secondaryRole?.let { BannerTagChip(text = it.label) }
+                BannerTagChip(text = if (hero.role == HeroRole.ALL) "MLBB" else hero.role.localizedLabel())
+                hero.secondaryRole?.let { BannerTagChip(text = it.localizedLabel()) }
                 BannerTagChip(text = hero.specialty)
             }
         }
@@ -268,13 +303,17 @@ private fun HeroBannerHeader(
 private fun BannerTagChip(text: String) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = Color(0x33FFFFFF),
-        border = BorderStroke(1.dp, Color(0x4DFFFFFF)),
+        color = LiquidGlass.SurfaceStrong,
+        border = BorderStroke(1.dp, LiquidGlass.Hairline),
+        modifier = Modifier.widthIn(max = 180.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
+            color = LiquidGlass.Ink,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
         )
     }
@@ -311,13 +350,13 @@ private fun SkinScriptsTab(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "${hero.name} Skin Bundles",
+                            text = stringResource(R.string.hero_skin_bundles, hero.name),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         val subtitle = if (unavailableCountForHero > 0) {
-                            "${scripts.size} shown • $unavailableCountForHero unavailable (404)"
+                            stringResource(R.string.skins_shown_unavailable, scripts.size, unavailableCountForHero)
                         } else {
-                            "${scripts.size} script profile(s) available • Single active per hero"
+                            stringResource(R.string.skins_available, scripts.size)
                         }
                         Text(
                             text = subtitle,
@@ -357,9 +396,9 @@ private fun SkinScriptsTab(
                         label = {
                             Text(
                                 text = if (hideUnavailableSkins) {
-                                    "Showing Working Only ($unavailableCountForHero hidden)"
+                                    stringResource(R.string.show_working_only, unavailableCountForHero)
                                 } else {
-                                    "Hide Unavailable ($unavailableCountForHero)"
+                                    stringResource(R.string.hide_unavailable, unavailableCountForHero)
                                 },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -383,10 +422,16 @@ private fun SkinScriptsTab(
         if (scripts.isEmpty() && unavailableCountForHero > 0 && hideUnavailableSkins) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Transparent,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .liquidGlass(
+                            shape = RoundedCornerShape(20.dp),
+                            tint = LiquidGlass.Surface,
+                            elevation = 2.dp,
+                            opacity = 0.96f,
+                        )
                         .testTag("all_skins_unavailable_empty_state"),
                 ) {
                     Column(
@@ -401,11 +446,11 @@ private fun SkinScriptsTab(
                             tint = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            text = "All $unavailableCountForHero skin(s) are unavailable (404)",
+                            text = stringResource(R.string.all_skins_unavailable, unavailableCountForHero),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = "Try another hero or import a local .zip skin bundle above.",
+                            text = stringResource(R.string.all_skins_unavailable_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -415,7 +460,7 @@ private fun SkinScriptsTab(
                                 .minimumInteractiveComponentSize()
                                 .testTag("show_unavailable_button"),
                         ) {
-                            Text("Show Unavailable Skins")
+                            Text(stringResource(R.string.show_unavailable_skins))
                         }
                     }
                 }
@@ -423,9 +468,16 @@ private fun SkinScriptsTab(
         } else if (scripts.isEmpty()) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(
+                            shape = RoundedCornerShape(20.dp),
+                            tint = LiquidGlass.Surface,
+                            elevation = 2.dp,
+                            opacity = 0.96f,
+                        ),
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -439,11 +491,11 @@ private fun SkinScriptsTab(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Text(
-                            text = "No scripts staged for ${hero.name}",
+                            text = stringResource(R.string.no_scripts_staged, hero.name),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            text = "Tap Import .zip above to stage a custom skin bundle for ${hero.name}.",
+                            text = stringResource(R.string.no_scripts_staged_hint, hero.name),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -476,6 +528,7 @@ private fun SkinScriptCard(
 ) {
     val context = LocalContext.current
     val semantic = LocalSemanticColors.current
+    val defaultSkin = stringResource(R.string.default_skin)
     val isActive = script.lifecycleState is ScriptLifecycleState.Injected
     val isError = script.lifecycleState is ScriptLifecycleState.Error
     val isUnavailable = script.isUnavailable
@@ -486,23 +539,30 @@ private fun SkinScriptCard(
         isError -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)
         isActive -> BorderStroke(2.dp, semantic.active)
         isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        else -> BorderStroke(1.dp, LiquidGlass.Hairline)
     }
 
+    val cardShape = RoundedCornerShape(20.dp)
+    val glassTint = when {
+        isUnavailable -> LiquidGlass.SurfaceMuted
+        isActive -> LiquidGlass.ActiveSurface
+        isSelected -> LiquidGlass.SelectedSurface
+        else -> LiquidGlass.Surface
+    }
     Card(
         onClick = onSelect,
-        shape = RoundedCornerShape(16.dp),
+        shape = cardShape,
         border = borderStroke,
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isUnavailable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                isActive -> semantic.activeContainer.copy(alpha = 0.35f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
-                else -> MaterialTheme.colorScheme.surface
-            },
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .liquidGlass(
+                shape = cardShape,
+                tint = glassTint,
+                elevation = if (isSelected) 4.dp else 2.dp,
+                opacity = 0.96f,
+            )
             .testTag("script_card_${script.scriptId}"),
     ) {
         Column(
@@ -524,7 +584,7 @@ private fun SkinScriptCard(
                     primaryUrl = script.imageUrl,
                     fallbackUrl = script.fallbackImageUrl,
                     label = script.skinName,
-                    contentDescription = "${script.skinName} preview",
+                    contentDescription = stringResource(R.string.hero_portrait, script.skinName),
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(12.dp)),
@@ -534,7 +594,7 @@ private fun SkinScriptCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    val displayTitle = script.skinName.ifBlank { "Default Skin" }
+                    val displayTitle = script.skinName.ifBlank { defaultSkin }
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.titleMedium,
@@ -556,7 +616,7 @@ private fun SkinScriptCard(
                             if (script.tagBadgeUrl.isNotBlank()) {
                                 RemoteTagBadgeImage(
                                     url = script.tagBadgeUrl,
-                                    contentDescription = "$displayTitle tier badge",
+                                    contentDescription = stringResource(R.string.tier_badge, displayTitle),
                                     modifier = Modifier.testTag("script_tag_badge_${script.scriptId}"),
                                 )
                             } else if (safeTextTag != null) {
@@ -577,7 +637,7 @@ private fun SkinScriptCard(
 
                     if (script.isUserImported) {
                         Text(
-                            text = "${script.version} • Imported",
+                            text = stringResource(R.string.imported_suffix, script.version),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -601,7 +661,7 @@ private fun SkinScriptCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.LinkOff,
-                                contentDescription = "Skin download unavailable",
+                                contentDescription = stringResource(R.string.skin_download_unavailable),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(14.dp),
                             )
@@ -617,6 +677,10 @@ private fun SkinScriptCard(
                     FilledTonalButton(
                         onClick = onDownload,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            contentColor = LiquidGlass.Ink,
+                        ),
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .minimumInteractiveComponentSize()
@@ -624,12 +688,12 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = if (isError) Icons.Filled.Refresh else Icons.Filled.Download,
-                            contentDescription = if (isError) "Retry download" else stringResource(R.string.action_download_skin),
+                            contentDescription = if (isError) stringResource(R.string.action_retry_download) else stringResource(R.string.action_download_skin),
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isError) "Retry" else stringResource(R.string.action_download_skin),
+                            text = if (isError) stringResource(R.string.action_retry) else stringResource(R.string.action_download_skin),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
@@ -637,6 +701,10 @@ private fun SkinScriptCard(
                     FilledTonalButton(
                         onClick = onInject,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            contentColor = LiquidGlass.Ink,
+                        ),
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .minimumInteractiveComponentSize()
@@ -644,12 +712,12 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Bolt,
-                            contentDescription = "Inject downloaded skin",
+                            contentDescription = stringResource(R.string.inject_downloaded_skin),
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Inject",
+                            text = stringResource(R.string.action_inject),
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
@@ -662,7 +730,7 @@ private fun SkinScriptCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.DeleteOutline,
-                            contentDescription = "Remove imported script",
+                            contentDescription = stringResource(R.string.remove_imported_script),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -701,7 +769,7 @@ private fun SkinScriptCard(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                     ) {
                         Text(
-                            text = "${script.targetRelativePaths.size} file(s)",
+                            text = stringResource(R.string.files_count, script.targetRelativePaths.size),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         )
@@ -723,7 +791,7 @@ private fun SkinScriptCard(
                                 )
                                 val sizeText = Formatter.formatShortFileSize(context, script.backupByteSize)
                                 Text(
-                                    text = "Backup ($sizeText)",
+                                    text = stringResource(R.string.backup_size, sizeText),
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             }
@@ -735,25 +803,25 @@ private fun SkinScriptCard(
             when (val state = script.lifecycleState) {
                 is ScriptLifecycleState.Downloading -> {
                     OperationProgressBlock(
-                        label = "Downloading remote skin package…",
+                        label = stringResource(R.string.downloading_remote_package),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.BackingUp -> {
                     OperationProgressBlock(
-                        label = "Backing up original: ${state.currentFile}",
+                        label = stringResource(R.string.backing_up_original, state.currentFile),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.Injecting -> {
                     OperationProgressBlock(
-                        label = "Injecting asset: ${state.currentFile}",
+                        label = stringResource(R.string.injecting_asset, state.currentFile),
                         progress = state.progress,
                     )
                 }
                 is ScriptLifecycleState.Restoring -> {
                     OperationProgressBlock(
-                        label = "Restoring original: ${state.currentFile}",
+                        label = stringResource(R.string.restoring_original, state.currentFile),
                         progress = state.progress,
                     )
                 }
@@ -854,24 +922,30 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                ),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        text = "Hero Attribute Profile",
+                        text = stringResource(R.string.hero_attribute_profile),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    AttributeMeterRow("Durability", hero.attributes.durability, MaterialTheme.colorScheme.secondary)
-                    AttributeMeterRow("Offense", hero.attributes.offense, MaterialTheme.colorScheme.error)
-                    AttributeMeterRow("Control Effect", hero.attributes.controlEffect, MaterialTheme.colorScheme.primary)
-                    AttributeMeterRow("Difficulty", hero.attributes.difficulty, MaterialTheme.colorScheme.tertiary)
+                    AttributeMeterRow(stringResource(R.string.attribute_durability), hero.attributes.durability, MaterialTheme.colorScheme.secondary)
+                    AttributeMeterRow(stringResource(R.string.attribute_offense), hero.attributes.offense, MaterialTheme.colorScheme.error)
+                    AttributeMeterRow(stringResource(R.string.attribute_control_effect), hero.attributes.controlEffect, MaterialTheme.colorScheme.primary)
+                    AttributeMeterRow(stringResource(R.string.attribute_difficulty), hero.attributes.difficulty, MaterialTheme.colorScheme.tertiary)
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
@@ -886,7 +960,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
         if (hero.combos.isNotEmpty()) {
             item {
                 Text(
-                    text = "Recommended Skill Combos",
+                    text = stringResource(R.string.recommended_skill_combos),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -898,7 +972,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "This hero was dynamically discovered from the remote skin configuration. Switch to the Skin Scripts tab to browse and manage its remote skins.",
+                        text = stringResource(R.string.dynamic_hero_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(14.dp),
@@ -909,10 +983,18 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
 
         items(hero.combos) { combo ->
             Card(
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, LiquidGlass.Hairline),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -975,7 +1057,7 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
         if (hero.skills.isNotEmpty()) {
             item {
                 Text(
-                    text = "Skill Kit Breakdown",
+                    text = stringResource(R.string.skill_kit_breakdown),
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -983,10 +1065,16 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
 
         items(hero.skills) { skill ->
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Transparent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(18.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -1080,11 +1168,18 @@ fun DockedScriptActionBar(
     }
     val isBlockedByRemote = activeRemoteConfig != null && !activeRemoteConfig.canInjectRemotely
 
+    val barShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     Surface(
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth(),
+        shape = barShape,
+        color = Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(
+                shape = barShape,
+                tint = LiquidGlass.SurfaceStrong,
+                elevation = 18.dp,
+                opacity = 0.97f,
+            ),
     ) {
         Column(
             modifier = Modifier
@@ -1100,20 +1195,20 @@ fun DockedScriptActionBar(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = selectedScript?.skinName ?: "No Script Selected",
+                        text = selectedScript?.skinName ?: stringResource(R.string.no_script_selected),
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = when {
-                            isUnavailable -> "Unavailable (404) • Please choose another skin"
-                            isBlockedByRemote -> "Injection paused by remote config • Restore still enabled"
-                            selectedScript == null -> "Select a skin script above to manage injection"
+                            isUnavailable -> stringResource(R.string.unavailable_choose_other)
+                            isBlockedByRemote -> stringResource(R.string.injection_paused_remote)
+                            selectedScript == null -> stringResource(R.string.select_script_hint)
                             selectedScript.isDownloaded && !shizukuState.isReadyForIo ->
-                                "Downloaded & saved • Connect Shizuku (${shizukuState.shortLabel()}) to inject"
-                            !shizukuState.isReadyForIo -> "Shizuku blocked: ${shizukuState.shortLabel()} (tap pill to configure)"
-                            else -> "Ready via Shizuku ${shizukuState.shortLabel()} • ${selectedScript.lifecycleState.displayLabel()}"
+                                stringResource(R.string.downloaded_connect_shizuku, shizukuState.localizedShortLabel())
+                            !shizukuState.isReadyForIo -> stringResource(R.string.shizuku_blocked, shizukuState.localizedShortLabel())
+                            else -> stringResource(R.string.ready_via_shizuku, shizukuState.localizedShortLabel(), selectedScript.lifecycleState.localizedLabel())
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isUnavailable || isBlockedByRemote) MaterialTheme.colorScheme.error
@@ -1137,7 +1232,7 @@ fun DockedScriptActionBar(
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Fix Shizuku")
+                        Text(stringResource(R.string.action_fix_shizuku))
                     }
                 }
             }
@@ -1145,6 +1240,7 @@ fun DockedScriptActionBar(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(
                     onClick = onInjectClick,
@@ -1153,24 +1249,30 @@ fun DockedScriptActionBar(
                         containerColor = if (isInjected) MaterialTheme.colorScheme.secondary
                         else MaterialTheme.colorScheme.primary,
                     ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.3f)
+                        .weight(1.55f)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("inject_selected_button"),
                 ) {
                     Icon(
                         imageVector = if (isInjected) Icons.Filled.Refresh else Icons.Filled.Bolt,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isInjected) {
                             stringResource(R.string.action_reinject)
                         } else {
                             stringResource(R.string.action_inject_selected)
                         },
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -1178,20 +1280,30 @@ fun DockedScriptActionBar(
                 FilledTonalButton(
                     onClick = onRestoreClick,
                     enabled = selectedScript != null && !isBusy && (hasBackup || isInjected),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = LiquidGlass.SurfaceMuted,
+                        contentColor = LiquidGlass.Ink,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.1f)
+                        .weight(1f)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("restore_original_button"),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Restore,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.action_restore_original),
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -1199,7 +1311,10 @@ fun DockedScriptActionBar(
                 OutlinedButton(
                     onClick = onClearBackupClick,
                     enabled = selectedScript != null && !isBusy && hasBackup && !isInjected,
+                    contentPadding = PaddingValues(0.dp),
                     modifier = Modifier
+                        .width(48.dp)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("clear_backup_button"),
                 ) {

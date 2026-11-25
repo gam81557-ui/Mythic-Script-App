@@ -23,23 +23,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.ui.components.CompanionTopAppBar
+import com.example.ui.components.LiquidGlassBackground
 import com.example.ui.components.ConfirmClearBackupDialog
 import com.example.ui.components.DisclaimerDetailsDialog
 import com.example.ui.components.DisclaimerWarningBanner
 import com.example.ui.components.HeroDetailPane
 import com.example.ui.components.HeroRosterPane
 import com.example.ui.components.ImportZipConfirmationSheet
-import com.example.ui.components.MaintenanceAlertDialog
+import com.example.ui.components.NotificationDialog
 import com.example.ui.components.PackageAndDiagnosticsSheet
 import com.example.ui.components.RemoteMaintenanceBanner
+import com.example.ui.components.ShizukuGuideDialog
 
 @Composable
 fun MythicScriptApp(
     viewModel: CompanionViewModel,
+    onToggleLanguage: () -> Unit = {},
 ) {
     val appContext = LocalContext.current.applicationContext
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -47,7 +53,9 @@ fun MythicScriptApp(
     // The ViewModel gates every download, including the auto-download behind Inject, so the
     // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
     DisposableEffect(viewModel, appContext) {
+        UnityAdManager.onGateAttached()
         val gate: (() -> Unit) -> Boolean = { onProceed ->
+            UnityAdManager.onGateRequested()
             UnityAdManager.showRewardedThenDownload(appContext) { onProceed() }
         }
         viewModel.adGate = gate
@@ -82,20 +90,23 @@ fun MythicScriptApp(
             }
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            topBar = {
-                CompanionTopAppBar(
-                    showBackButton = !isExpandedLayout && isShowingCompactDetail,
-                    shizukuState = uiState.shizukuState,
-                    targetPackage = uiState.targetPackage,
-                    onBackClick = { isShowingCompactDetail = false },
-                    onShizukuStatusClick = { viewModel.setDiagnosticsSheetVisible(true) },
-                    onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
-                    onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
-                )
-            },
-        ) { innerPadding ->
+        LiquidGlassBackground {
+            Scaffold(
+                containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                topBar = {
+                    CompanionTopAppBar(
+                        showBackButton = !isExpandedLayout && isShowingCompactDetail,
+                        shizukuState = uiState.shizukuState,
+                        targetPackage = uiState.targetPackage,
+                        onBackClick = { isShowingCompactDetail = false },
+                        onShizukuStatusClick = viewModel::handleShizukuStatusClick,
+                        onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
+                        onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
+                        onToggleLanguage = onToggleLanguage,
+                    )
+                },
+            ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -217,6 +228,7 @@ fun MythicScriptApp(
                     }
                 }
             }
+            }
         }
     }
 
@@ -230,6 +242,16 @@ fun MythicScriptApp(
                 isShowingCompactDetail = true
             },
             onDismiss = viewModel::cancelImportPreview,
+        )
+    }
+
+    if (uiState.showShizukuGuideDialog) {
+        ShizukuGuideDialog(
+            state = uiState.shizukuState,
+            onOpenShizukuApp = viewModel::openShizukuApp,
+            onWatchTutorial = viewModel::openShizukuTutorial,
+            onRefresh = viewModel::refreshShizukuStatus,
+            onDismiss = viewModel::dismissShizukuGuide,
         )
     }
 
@@ -260,7 +282,7 @@ fun MythicScriptApp(
 
     if (showClearBackupConfirm) {
         ConfirmClearBackupDialog(
-            skinName = uiState.selectedScript?.skinName ?: "Selected Script",
+            skinName = uiState.selectedScript?.skinName ?: stringResource(R.string.msg_selected_script),
             onConfirm = {
                 showClearBackupConfirm = false
                 viewModel.clearSelectedBackup()
@@ -269,11 +291,11 @@ fun MythicScriptApp(
         )
     }
 
-    if (uiState.showMaintenanceDialog) {
-        MaintenanceAlertDialog(
-            message = uiState.maintenanceMessage,
-            onRetry = { viewModel.refreshRemoteConfig(showFeedbackToast = true) },
-            onDismiss = { viewModel.dismissMaintenanceDialog() },
+    if (uiState.showNoticeDialog) {
+        NotificationDialog(
+            title = uiState.noticeTitle,
+            message = uiState.noticeMessage,
+            onDismiss = { viewModel.dismissNoticeDialog() },
         )
     }
 }
