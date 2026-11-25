@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -34,6 +35,7 @@ import com.example.domain.model.SkinScriptItem
 import com.example.domain.model.StagedBundlePreview
 import com.example.shizuku.ShizukuBridgeManager
 import com.example.shizuku.ShizukuConnectionState
+import com.example.shizuku.ShizukuStatusAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -87,6 +89,7 @@ data class CompanionUiState(
     val isImportingZip: Boolean = false,
     val pendingImportPreview: StagedBundlePreview? = null,
     val showDiagnosticsSheet: Boolean = false,
+    val showShizukuGuideDialog: Boolean = false,
     val showDisclaimerDialog: Boolean = false,
     val totalBackupBytes: Long = 0L,
     val remoteConfigState: RemoteConfigState = RemoteConfigState.Loading,
@@ -108,6 +111,7 @@ private data class ModalAndTransientState(
     val isImportingZip: Boolean,
     val pendingImportPreview: StagedBundlePreview?,
     val showDiagnosticsSheet: Boolean,
+    val showShizukuGuideDialog: Boolean,
     val showDisclaimerDialog: Boolean,
     val maintenanceDismissedFetchMillis: Long? = null,
     val snackbarMessage: String? = null,
@@ -180,6 +184,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     private val isImportingZipFlow = MutableStateFlow(false)
     private val pendingImportPreviewFlow = MutableStateFlow<StagedBundlePreview?>(null)
     private val showDiagnosticsSheetFlow = MutableStateFlow(false)
+    private val showShizukuGuideDialogFlow = MutableStateFlow(false)
     private val showDisclaimerDialogFlow = MutableStateFlow(false)
     private val maintenanceDismissedFetchMillisFlow = MutableStateFlow<Long?>(null)
     private val snackbarMessageFlow = MutableStateFlow<String?>(null)
@@ -207,8 +212,11 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             isImportingZip = importing,
             pendingImportPreview = preview,
             showDiagnosticsSheet = diagnostics,
+            showShizukuGuideDialog = false,
             showDisclaimerDialog = disclaimer,
         )
+    }.combine(showShizukuGuideDialogFlow) { modal, guide ->
+        modal.copy(showShizukuGuideDialog = guide)
     }.combine(maintenanceDismissedFetchMillisFlow) { modal, dismissedAt ->
         modal.copy(maintenanceDismissedFetchMillis = dismissedAt)
     }.combine(snackbarMessageFlow) { modal, snack ->
@@ -417,6 +425,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             isImportingZip = modalState.isImportingZip,
             pendingImportPreview = modalState.pendingImportPreview,
             showDiagnosticsSheet = modalState.showDiagnosticsSheet,
+            showShizukuGuideDialog = modalState.showShizukuGuideDialog,
             showDisclaimerDialog = modalState.showDisclaimerDialog,
             totalBackupBytes = totalBackupBytes,
             remoteConfigState = remoteConfigState,
@@ -655,6 +664,18 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         shizukuBridge.stopListening()
     }
 
+    fun handleShizukuStatusClick() {
+        when (uiState.value.shizukuState.statusAction()) {
+            ShizukuStatusAction.RequestPermission -> requestShizukuPermission()
+            ShizukuStatusAction.Refresh -> refreshShizukuStatus()
+            ShizukuStatusAction.ShowGuide -> showShizukuGuideDialogFlow.value = true
+        }
+    }
+
+    fun dismissShizukuGuide() {
+        showShizukuGuideDialogFlow.value = false
+    }
+
     fun refreshShizukuStatus() {
         shizukuBridge.refreshStatus()
     }
@@ -670,6 +691,21 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun openShizukuApp() {
         if (!shizukuBridge.openShizukuApp()) {
             snackbarMessageFlow.value = tr(R.string.msg_shizuku_not_installed)
+        }
+    }
+
+    fun openShizukuTutorial() {
+        val opened = runCatching {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(SHIZUKU_TUTORIAL_URL))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            getApplication<Application>().startActivity(intent)
+            true
+        }.getOrElse { error ->
+            Log.e("CompanionViewModel", "Unable to open Shizuku tutorial", error)
+            false
+        }
+        if (!opened) {
+            snackbarMessageFlow.value = tr(R.string.msg_shizuku_tutorial_unavailable)
         }
     }
 
@@ -1144,4 +1180,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val disclaimerDismissed: Boolean,
         val shizukuState: ShizukuConnectionState,
     )
+
+    private companion object {
+        const val SHIZUKU_TUTORIAL_URL =
+            "https://youtu.be/5CgusYyhQKY?si=C9kpRC5e6LcBUD2M"
+    }
 }

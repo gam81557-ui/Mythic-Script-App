@@ -246,6 +246,7 @@ fun ShizukuStatusPill(
         )
     }
 
+    val actionDescription = stringResource(R.string.cd_shizuku_status_action, shortText)
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
@@ -254,6 +255,7 @@ fun ShizukuStatusPill(
             .padding(end = 4.dp)
             .minimumInteractiveComponentSize()
             .widthIn(max = 132.dp)
+            .semantics { contentDescription = actionDescription }
             .testTag("shizuku_status_pill"),
     ) {
         Row(

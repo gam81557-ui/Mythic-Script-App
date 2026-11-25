@@ -38,6 +38,31 @@ class LocalizationTest {
     }
 
     @Test
+    fun `Shizuku guide labels and credit are localized`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        try {
+            LocaleManager.setLanguage(app, LocaleManager.BURMESE)
+            val burmese = LocaleManager.localizedContext(app)
+            assertEquals("Shizuku စတင်ရန်", burmese.getString(R.string.shizuku_guide_title))
+            assertEquals(
+                "သင်ခန်းစာ ကြည့်ရန်",
+                burmese.getString(R.string.action_watch_tutorial),
+            )
+            assertEquals("Credit: Kazeno", burmese.getString(R.string.shizuku_tutorial_credit))
+            assertNotEquals(
+                app.getString(R.string.shizuku_guide_title),
+                burmese.getString(R.string.shizuku_guide_title),
+            )
+        } finally {
+            LocaleManager.setLanguage(app, LocaleManager.ENGLISH)
+        }
+
+        assertEquals("Start Shizuku", app.getString(R.string.shizuku_guide_title))
+        assertEquals("Watch Tutorial", app.getString(R.string.action_watch_tutorial))
+        assertEquals("Credit: Kazeno", app.getString(R.string.shizuku_tutorial_credit))
+    }
+
+    @Test
     fun `toggling language repeatedly keeps resources in sync`() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         try {

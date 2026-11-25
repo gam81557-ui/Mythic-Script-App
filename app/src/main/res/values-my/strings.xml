@@ -103,12 +103,24 @@
     <string name="shizuku_not_running">မလည်ပတ်ပါ</string>
     <string name="shizuku_no_shizuku">Shizuku မရှိပါ</string>
     <string name="shizuku_reconnect">ပြန်လည်ချိတ်ဆက်ပါ</string>
+    <string name="cd_shizuku_status_action">Shizuku အခြေအနေ - %1$s။ စီမံရန် နှိပ်ပါ။</string>
     <string name="cd_shizuku_status">Shizuku ချိတ်ဆက်မှု အခြေအနေ - %1$s</string>
     <string name="shizuku_not_installed">ထည့်သွင်းမထားပါ</string>
     <string name="shizuku_permission_denied">ခွင့်ပြုချက် ငြင်းပယ်ထားသည်</string>
     <string name="shizuku_permission_granted">ခွင့်ပြုချက် ပေးထားသည်</string>
     <string name="shizuku_connected">ချိတ်ဆက်ပြီး (%1$s)</string>
     <string name="shizuku_service_disconnected">ဝန်ဆောင်မှု ချိတ်ဆက်မှု ပြတ်တောက်သည်</string>
+    <string name="shizuku_guide_title">Shizuku စတင်ရန်</string>
+    <string name="shizuku_guide_not_running">Shizuku ထည့်သွင်းထားသော်လည်း ၎င်း၏ ဝန်ဆောင်မှု မလည်ပတ်ပါ။ Wireless Debugging သို့မဟုတ် ADB ဖြင့် Shizuku အက်ပ်မှ Shizuku ကို စတင်ပြီး ပြန်လည်စစ်ဆေးပါ။</string>
+    <string name="shizuku_guide_not_installed">Shizuku မထည့်သွင်းရသေးပါ။ ဦးစွာ Shizuku ကို ထည့်သွင်းပြီး Wireless Debugging သို့မဟုတ် ADB ဖြင့် ၎င်း၏ ဝန်ဆောင်မှုကို စတင်ပါ။</string>
+    <string name="shizuku_guide_disconnected">Shizuku လည်ပတ်နေသော်လည်း အထူးအခွင့်အရေးဝန်ဆောင်မှု ချိတ်ဆက်မှု ပြတ်တောက်နေသည်။ Shizuku ကို ဖွင့်ပြီး လည်ပတ်နေကြောင်း စစ်ဆေးကာ ပြန်လည်စစ်ဆေးပါ။</string>
+    <string name="shizuku_guide_permission">Shizuku လည်ပတ်နေသည်။ အထူးအခွင့်အရေးရ FileBridge ဝန်ဆောင်မှုကို ချိတ်ဆက်ရန် ခွင့်ပြုချက် ပေးပါ။</string>
+    <string name="shizuku_how_to_start">Shizuku စတင်နည်း</string>
+    <string name="shizuku_how_to_start_body">အဆင့်ဆင့် လမ်းညွှန်ချက်များအတွက် သင်ခန်းစာဗီဒီယိုကို ကြည့်ပါ။</string>
+    <string name="action_watch_tutorial">သင်ခန်းစာ ကြည့်ရန်</string>
+    <string name="action_close">ပိတ်ပါ</string>
+    <string name="shizuku_tutorial_credit">Credit: Kazeno</string>
+    <string name="msg_shizuku_tutorial_unavailable">သင်ခန်းစာဖွင့်ရန် အက်ပ် မရှိပါ။</string>
 
     <string name="stage_imported_zip">တင်သွင်းထားသော .zip အစုကို အဆင့်သတ်မှတ်ပါ</string>
     <string name="files_size">ဖိုင် %1$d ခု • %2$s</string>

@@ -103,12 +103,24 @@
     <string name="shizuku_not_running">Not Running</string>
     <string name="shizuku_no_shizuku">No Shizuku</string>
     <string name="shizuku_reconnect">Reconnect</string>
+    <string name="cd_shizuku_status_action">Shizuku status: %1$s. Tap to manage.</string>
     <string name="cd_shizuku_status">Shizuku connection status: %1$s</string>
     <string name="shizuku_not_installed">Not Installed</string>
     <string name="shizuku_permission_denied">Permission Denied</string>
     <string name="shizuku_permission_granted">Permission Granted</string>
     <string name="shizuku_connected">Connected (%1$s)</string>
     <string name="shizuku_service_disconnected">Service Disconnected</string>
+    <string name="shizuku_guide_title">Start Shizuku</string>
+    <string name="shizuku_guide_not_running">Shizuku is installed, but its service is not running. Start Shizuku from the Shizuku app using Wireless Debugging or ADB, then refresh.</string>
+    <string name="shizuku_guide_not_installed">Shizuku is not installed. Install Shizuku first, then start its service using Wireless Debugging or ADB.</string>
+    <string name="shizuku_guide_disconnected">Shizuku is running, but the privileged service is disconnected. Open Shizuku, check that it is running, then refresh.</string>
+    <string name="shizuku_guide_permission">Shizuku is running. Grant permission to connect the privileged FileBridge service.</string>
+    <string name="shizuku_how_to_start">How to Start Shizuku</string>
+    <string name="shizuku_how_to_start_body">Watch the tutorial for step-by-step instructions.</string>
+    <string name="action_watch_tutorial">Watch Tutorial</string>
+    <string name="action_close">Close</string>
+    <string name="shizuku_tutorial_credit">Credit: Kazeno</string>
+    <string name="msg_shizuku_tutorial_unavailable">No app available to open the tutorial.</string>
 
     <string name="stage_imported_zip">Stage Imported .zip Bundle</string>
     <string name="files_size">%1$d file(s) • %2$s</string>

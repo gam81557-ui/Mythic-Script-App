@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Launch
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -231,6 +232,136 @@ fun ImportZipConfirmationSheet(
             }
         }
     }
+}
+
+@Composable
+fun ShizukuGuideDialog(
+    state: ShizukuConnectionState,
+    onOpenShizukuApp: () -> Unit,
+    onWatchTutorial: () -> Unit,
+    onRefresh: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val message = when (state) {
+        ShizukuConnectionState.NotInstalled ->
+            stringResource(R.string.shizuku_guide_not_installed)
+        ShizukuConnectionState.NotRunning ->
+            stringResource(R.string.shizuku_guide_not_running)
+        is ShizukuConnectionState.PermissionDenied ->
+            stringResource(R.string.shizuku_guide_permission)
+        ShizukuConnectionState.PermissionGranted ->
+            stringResource(R.string.shizuku_permission_granted_message)
+        is ShizukuConnectionState.ServiceConnected ->
+            stringResource(R.string.shizuku_connected_message, state.processLabel)
+        is ShizukuConnectionState.ServiceDisconnected ->
+            stringResource(R.string.shizuku_guide_disconnected)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Filled.Security,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.shizuku_guide_title),
+                modifier = Modifier.testTag("shizuku_guide_title"),
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("shizuku_guide_message"),
+                )
+                HorizontalDivider()
+                Text(
+                    text = stringResource(R.string.shizuku_how_to_start),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.shizuku_how_to_start_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = onWatchTutorial,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_watch_tutorial_button"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_watch_tutorial))
+                }
+                Text(
+                    text = stringResource(R.string.shizuku_tutorial_credit),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.testTag("shizuku_tutorial_credit"),
+                )
+                if (state == ShizukuConnectionState.NotInstalled) {
+                    Text(
+                        text = stringResource(R.string.msg_shizuku_not_installed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("shizuku_not_installed_fallback"),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onOpenShizukuApp,
+                modifier = Modifier
+                    .minimumInteractiveComponentSize()
+                    .testTag("shizuku_open_app_button"),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Launch,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.action_open_shizuku))
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_guide_refresh"),
+                ) {
+                    Text(stringResource(R.string.action_refresh))
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize()
+                        .testTag("shizuku_guide_close"),
+                ) {
+                    Text(stringResource(R.string.action_close))
+                }
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

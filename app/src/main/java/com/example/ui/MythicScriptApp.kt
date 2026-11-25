@@ -38,6 +38,7 @@ import com.example.ui.components.ImportZipConfirmationSheet
 import com.example.ui.components.MaintenanceAlertDialog
 import com.example.ui.components.PackageAndDiagnosticsSheet
 import com.example.ui.components.RemoteMaintenanceBanner
+import com.example.ui.components.ShizukuGuideDialog
 
 @Composable
 fun MythicScriptApp(
@@ -95,7 +96,7 @@ fun MythicScriptApp(
                     shizukuState = uiState.shizukuState,
                     targetPackage = uiState.targetPackage,
                     onBackClick = { isShowingCompactDetail = false },
-                    onShizukuStatusClick = { viewModel.setDiagnosticsSheetVisible(true) },
+                    onShizukuStatusClick = viewModel::handleShizukuStatusClick,
                     onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
                     onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
                     onToggleLanguage = onToggleLanguage,
@@ -236,6 +237,16 @@ fun MythicScriptApp(
                 isShowingCompactDetail = true
             },
             onDismiss = viewModel::cancelImportPreview,
+        )
+    }
+
+    if (uiState.showShizukuGuideDialog) {
+        ShizukuGuideDialog(
+            state = uiState.shizukuState,
+            onOpenShizukuApp = viewModel::openShizukuApp,
+            onWatchTutorial = viewModel::openShizukuTutorial,
+            onRefresh = viewModel::refreshShizukuStatus,
+            onDismiss = viewModel::dismissShizukuGuide,
         )
     }
 

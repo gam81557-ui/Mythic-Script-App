@@ -16,6 +16,12 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
+enum class ShizukuStatusAction {
+    RequestPermission,
+    Refresh,
+    ShowGuide,
+}
+
 sealed class ShizukuConnectionState {
     data object NotInstalled : ShizukuConnectionState()
     data object NotRunning : ShizukuConnectionState()
@@ -26,6 +32,17 @@ sealed class ShizukuConnectionState {
 
     val isReadyForIo: Boolean
         get() = this is ServiceConnected
+
+    fun statusAction(): ShizukuStatusAction = when (this) {
+        is PermissionDenied -> ShizukuStatusAction.RequestPermission
+        PermissionGranted,
+        is ServiceConnected,
+        -> ShizukuStatusAction.Refresh
+        NotRunning,
+        NotInstalled,
+        is ServiceDisconnected,
+        -> ShizukuStatusAction.ShowGuide
+    }
 
     fun shortLabel(): String = when (this) {
         NotInstalled -> "Not Installed"
@@ -110,7 +127,9 @@ class ShizukuBridgeManager(private val appContext: Context) {
             if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
                 if (grantResult == PackageManager.PERMISSION_GRANTED) {
                     _connectionState.value = ShizukuConnectionState.PermissionGranted
-                    bindUserService()
+                    // Re-read the live binder/UID immediately after the grant so the pill
+                    // switches from "Grant" to the connected UID without another tap.
+                    refreshStatus()
                 } else {
                     val canAsk = runCatching {
                         !Shizuku.shouldShowRequestPermissionRationale()
