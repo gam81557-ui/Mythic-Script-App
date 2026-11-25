@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -10,10 +11,15 @@ import android.os.Looper
 import android.util.Log
 import android.webkit.WebView
 import com.example.BuildConfig
-import com.unity3d.ads.IUnityAdsInitializationListener
 import com.unity3d.ads.IUnityAdsLoadListener
 import com.unity3d.ads.IUnityAdsShowListener
+import com.unity3d.ads.InitializationConfiguration
+import com.unity3d.ads.InitializationListener
+import com.unity3d.ads.LogLevel
 import com.unity3d.ads.UnityAds
+import com.unity3d.ads.UnityAdsError
+import com.unity3d.services.core.lifecycle.CachedLifecycle
+import com.unity3d.services.core.properties.ClientProperties
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,14 +51,19 @@ object UnityAdManager {
     const val BANNER_PLACEMENT = "BP_Banner_Android"
 
     private const val TAG = "UnityAdManager"
-    // Unity test mode is debug-only; release builds always use production ads.
-    private val TEST_MODE = BuildConfig.DEBUG
+    // Production releases must never request Unity test ads.
+    private const val TEST_MODE = false
+    // SDK debug logging is allowed only in debug builds.
+    private val SDK_DEBUG_MODE = BuildConfig.DEBUG
     private const val LOAD_TIMEOUT_MS = 12_000L
-    // 4.22 initializes through the native gateway. Give it enough time for a slow
-    // first-run device-info/consent round trip without hiding a real callback failure.
-    private const val INIT_TIMEOUT_MS = 45_000L
+    // Unity 4.22 wraps the gateway round trip in a 120s timeout. The app watchdog must
+    // outlive it; resetting SDK state earlier drops the SDK's eventual callback.
+    private const val INIT_TIMEOUT_MS = 130_000L
     private const val INIT_POLL_MS = 1_000L
-    private const val PENDING_INIT_TIMEOUT_MS = INIT_TIMEOUT_MS + 5_000L
+    private const val INIT_STUCK_POLL_MS = 5_000L
+    // Never hold a download hostage to a slow ad-network init. Init continues in the
+    // background after this gate timeout.
+    private const val PENDING_INIT_TIMEOUT_MS = 20_000L
     private const val SHOW_TIMEOUT_MS = 65_000L
 
     private val _isInitialized = MutableStateFlow(false)
@@ -72,8 +83,9 @@ object UnityAdManager {
     private var preloadRequested = false
     private var initAttempt = 0
     private var initStartedAt = 0L
-    private var initListener: IUnityAdsInitializationListener? = null
+    private var initListener: InitializationListener? = null
     private var initWatchdogToken: Any? = null
+    private var initTimedOut = false
 
     private var rewardedReady = false
     private var interstitialReady = false
@@ -150,7 +162,8 @@ object UnityAdManager {
 
     fun release() {
         activityRef = null
-        appContext = null
+        // Keep the application context: an in-flight init callback may arrive after the
+        // activity is recreated (for example on a locale change).
         loadGeneration++
         // Keep the init watchdog alive: initialization may still be running while the activity is recreated.
         loadTimeoutToken = null
@@ -172,8 +185,12 @@ object UnityAdManager {
         }
         val app = context.applicationContext ?: context
         appContext = app
+        repairSdkContext(app)
 
         if (UnityAds.isInitialized) {
+            initializing = false
+            initTimedOut = false
+            initListener = null
             _isInitialized.value = true
             updateDebug {
                 it.copy(
@@ -189,16 +206,26 @@ object UnityAdManager {
             return
         }
         if (initializing) {
+            val state = sdkInitializationState()
             Log.i(
                 TAG,
                 "UNITY_INIT_IN_PROGRESS attempt=$initAttempt elapsed=${initElapsedMs()}ms " +
-                    "state=${sdkInitializationState()} ${sdkDiagnostics()}",
+                    "state=${state ?: "n/a"} timedOut=$initTimedOut ${sdkDiagnostics()}",
             )
             updateDebug {
                 it.copy(
-                    init = "Init: already initializing",
-                    initDetail = "attempt=$initAttempt elapsed=${initElapsedMs()}ms ${sdkDiagnostics()}",
-                    reason = "INIT_IN_PROGRESS",
+                    init = if (initTimedOut) {
+                        "Init: NO CALLBACK ${initElapsedMs()}ms"
+                    } else {
+                        "Init: already initializing"
+                    },
+                    initDetail = "attempt=$initAttempt elapsed=${initElapsedMs()}ms state=${state ?: "n/a"} " +
+                        sdkDiagnostics(),
+                    reason = when {
+                        initTimedOut && state == "INITIALIZING" -> "INIT_STUCK_INITIALIZING"
+                        initTimedOut -> "INIT_NO_CALLBACK"
+                        else -> "INIT_IN_PROGRESS"
+                    },
                 )
             }
             return
@@ -215,6 +242,7 @@ object UnityAdManager {
         }
 
         initializing = true
+        initTimedOut = false
         initAttempt++
         initStartedAt = System.currentTimeMillis()
         val online = isOnline(app)
@@ -242,47 +270,60 @@ object UnityAdManager {
 
     private fun startSdkInitialization(context: Context) {
         val attempt = initAttempt
+        repairSdkContext(context)
+        runCatching { UnityAds.debugMode = SDK_DEBUG_MODE }
+            .onFailure { Log.w(TAG, "Unable to set Unity debug mode: ${it.message}", it) }
+        val configuration = InitializationConfiguration.Builder(GAME_ID)
+            .withTestMode(TEST_MODE)
+            .withLogLevel(if (SDK_DEBUG_MODE) LogLevel.DEBUG else LogLevel.ERROR)
+            .withContext(context)
+            .build()
         updateDebug {
             it.copy(
                 init = "Init: attempt $attempt",
                 initDetail = "ctx=${context.javaClass.simpleName} game=$GAME_ID test=$TEST_MODE " +
-                    "sdkInit=${UnityAds.isInitialized}",
+                    "sdkDebug=$SDK_DEBUG_MODE sdkInit=${UnityAds.isInitialized}",
                 reason = "INIT_CALL",
             )
         }
         Log.i(
             TAG,
-            "UNITY_INIT_CALL attempt=$attempt gameId=$GAME_ID testMode=$TEST_MODE " +
-                "ctx=${context.javaClass.name} sdkInit=${UnityAds.isInitialized} " +
-                "supported=${UnityAds.isSupported} version=${UnityAds.version}",
+            "UNITY_INIT_CALL_API attempt=$attempt gameId=$GAME_ID testMode=$TEST_MODE " +
+                "sdkDebug=$SDK_DEBUG_MODE ctx=${context.javaClass.name} sdkInit=${UnityAds.isInitialized} " +
+                "supported=${UnityAds.isSupported} version=${UnityAds.version} " +
+                "clientApp=${ClientProperties.getApplication()?.javaClass?.name ?: "null"} " +
+                "clientCtx=${ClientProperties.getApplicationContext()?.javaClass?.name ?: "null"}",
         )
-        runCatching { UnityAds.debugMode = TEST_MODE }
-            .onFailure { Log.w(TAG, "Unable to set Unity debug mode: ${it.message}", it) }
-        val listener = object : IUnityAdsInitializationListener {
-            override fun onInitializationComplete() {
-                Log.i(
-                    TAG,
-                    "UNITY_INIT_CALLBACK_SUCCESS attempt=$attempt thread=${Thread.currentThread().name} " +
-                        "elapsed=${initElapsedMs()}ms",
-                )
-                mainHandler.post { handleInitSuccess(attempt, "callback") }
-            }
-
-            override fun onInitializationFailed(
-                error: UnityAds.UnityAdsInitializationError,
-                message: String,
-            ) {
-                Log.e(
-                    TAG,
-                    "UNITY_INIT_CALLBACK_FAILURE attempt=$attempt error=$error message=$message " +
-                        "thread=${Thread.currentThread().name} elapsed=${initElapsedMs()}ms",
-                )
-                mainHandler.post { handleInitFailure(attempt, error, message, "callback") }
+        val listener = object : InitializationListener {
+            override fun onInitializationComplete(error: UnityAdsError?) {
+                if (error == null) {
+                    Log.i(
+                        TAG,
+                        "UNITY_INIT_CALLBACK_SUCCESS attempt=$attempt thread=${Thread.currentThread().name} " +
+                            "elapsed=${initElapsedMs()}ms",
+                    )
+                    mainHandler.post { handleInitSuccess(attempt, "callback") }
+                } else {
+                    Log.e(
+                        TAG,
+                        "UNITY_INIT_CALLBACK_FAILURE attempt=$attempt code=${error.code} " +
+                            "message=${error.message} thread=${Thread.currentThread().name} " +
+                            "elapsed=${initElapsedMs()}ms",
+                    )
+                    mainHandler.post {
+                        handleInitFailure(
+                            attempt,
+                            UnityAds.UnityAdsInitializationError.INTERNAL_ERROR,
+                            "code=${error.code} ${error.message}",
+                            "callback",
+                        )
+                    }
+                }
             }
         }
         initListener = listener
         try {
-            UnityAds.initialize(context, GAME_ID, TEST_MODE, listener)
+            UnityAds.initialize(configuration, listener)
         } catch (t: Throwable) {
             Log.e(
                 TAG,
@@ -298,6 +339,23 @@ object UnityAdManager {
             return
         }
         scheduleInitWatchdog(attempt)
+    }
+
+    private fun repairSdkContext(context: Context) {
+        runCatching {
+            val app = context.applicationContext ?: context
+            ClientProperties.setApplicationContext(app)
+            (app as? Application)?.let { ClientProperties.setApplication(it) }
+            CachedLifecycle.register()
+            Log.i(
+                TAG,
+                "UNITY_INIT_CONTEXT app=${app.javaClass.name} " +
+                    "clientApp=${ClientProperties.getApplication()?.javaClass?.name ?: "null"} " +
+                    "clientCtx=${ClientProperties.getApplicationContext()?.javaClass?.name ?: "null"}",
+            )
+        }.onFailure {
+            Log.w(TAG, "UNITY_INIT_CONTEXT_FAIL ${it.javaClass.simpleName}: ${it.message}", it)
+        }
     }
 
     private fun sdkInitializationState(): String? =
@@ -369,6 +427,7 @@ object UnityAdManager {
         val elapsed = initElapsedMs()
         val diag = sdkDiagnostics()
         initializing = false
+        initTimedOut = false
         initListener = null
         initWatchdogToken = null
         _isInitialized.value = true
@@ -410,6 +469,7 @@ object UnityAdManager {
         val elapsed = initElapsedMs()
         val diag = sdkDiagnostics()
         initializing = false
+        initTimedOut = false
         initListener = null
         initWatchdogToken = null
         preloadRequested = false
@@ -429,7 +489,7 @@ object UnityAdManager {
         completePendingDownload()
     }
 
-    private fun scheduleInitWatchdog(attempt: Int) {
+    private fun scheduleInitWatchdog(attempt: Int, delayMs: Long = INIT_POLL_MS) {
         initWatchdogToken = null
         val token = Any()
         initWatchdogToken = token
@@ -457,37 +517,73 @@ object UnityAdManager {
                 return@postDelayed
             }
             if (elapsed >= INIT_TIMEOUT_MS) {
-                initializing = false
-                initWatchdogToken = null
-                initListener = null
-                updateDebug {
-                    it.copy(
-                        init = "Init: TIMEOUT ${elapsed}ms",
-                        initDetail = "state=${state ?: "n/a"} $diag",
-                        reason = "INIT_TIMEOUT",
-                        lastError = "no init callback after ${elapsed}ms | state=${state ?: "n/a"} | $diag",
+                if (state == "NOT_INITIALIZED") {
+                    handleInitFailure(
+                        attempt,
+                        UnityAds.UnityAdsInitializationError.INTERNAL_ERROR,
+                        "SDK stayed NOT_INITIALIZED and never called back",
+                        "timeout",
                     )
+                    return@postDelayed
                 }
-                Log.e(
-                    TAG,
-                    "UNITY_INIT_TIMEOUT attempt=$attempt elapsed=${elapsed}ms state=${state ?: "n/a"} $diag",
-                )
-                resetSdkInitializationState()
-                completePendingDownload()
-            } else {
-                updateDebug {
-                    it.copy(
-                        init = "Init: waiting ${elapsed}ms",
-                        initDetail = "attempt=$attempt state=${state ?: "n/a"} $diag",
-                        reason = "INIT_WAITING",
+                // Do not reset the SDK here. Unity 4.22 may still be inside its own
+                // 120s gateway timeout; resetting state/listeners drops the late callback
+                // and makes every retry return without a callback too.
+                if (!initTimedOut) {
+                    initTimedOut = true
+                    updateDebug {
+                        it.copy(
+                            init = "Init: NO CALLBACK ${elapsed}ms",
+                            initDetail = "state=${state ?: "n/a"} $diag",
+                            reason = if (state == "INITIALIZING") {
+                                "INIT_STUCK_INITIALIZING"
+                            } else {
+                                "INIT_NO_CALLBACK"
+                            },
+                            lastError = "no init callback after ${elapsed}ms | state=${state ?: "n/a"} | $diag",
+                        )
+                    }
+                    Log.e(
+                        TAG,
+                        "UNITY_INIT_NO_CALLBACK attempt=$attempt elapsed=${elapsed}ms " +
+                            "state=${state ?: "n/a"} (listener kept registered) $diag",
                     )
+                    completePendingDownload()
+                } else {
+                    updateDebug {
+                        it.copy(
+                            init = "Init: NO CALLBACK ${elapsed}ms",
+                            initDetail = "state=${state ?: "n/a"} $diag",
+                            reason = if (state == "INITIALIZING") {
+                                "INIT_STUCK_INITIALIZING"
+                            } else {
+                                "INIT_NO_CALLBACK"
+                            },
+                        )
+                    }
+                    if (elapsed % 15_000L < INIT_STUCK_POLL_MS) {
+                        Log.i(
+                            TAG,
+                            "UNITY_INIT_LATE_WAIT attempt=$attempt elapsed=${elapsed}ms " +
+                                "state=${state ?: "n/a"} $diag",
+                        )
+                    }
                 }
-                if (elapsed % 5_000L < INIT_POLL_MS) {
-                    Log.i(TAG, "UNITY_INIT_WAIT attempt=$attempt elapsed=${elapsed}ms state=${state ?: "n/a"} $diag")
-                }
-                scheduleInitWatchdog(attempt)
+                scheduleInitWatchdog(attempt, INIT_STUCK_POLL_MS)
+                return@postDelayed
             }
-        }, INIT_POLL_MS)
+            updateDebug {
+                it.copy(
+                    init = "Init: waiting ${elapsed}ms",
+                    initDetail = "attempt=$attempt state=${state ?: "n/a"} $diag",
+                    reason = "INIT_WAITING",
+                )
+            }
+            if (elapsed % 5_000L < INIT_POLL_MS) {
+                Log.i(TAG, "UNITY_INIT_WAIT attempt=$attempt elapsed=${elapsed}ms state=${state ?: "n/a"} $diag")
+            }
+            scheduleInitWatchdog(attempt)
+        }, delayMs)
     }
 
     private fun resetSdkInitializationState() {
@@ -524,8 +620,20 @@ object UnityAdManager {
             mainHandler.post { retryInit() }
             return
         }
-        if (initializing) {
-            Log.i(TAG, "UNITY_INIT_RETRY ignored: attempt=$initAttempt still initializing")
+        val state = sdkInitializationState()
+        if (initializing || state == "INITIALIZING") {
+            Log.w(
+                TAG,
+                "UNITY_INIT_RETRY_BLOCKED attempt=$initAttempt initializing=$initializing " +
+                    "state=${state ?: "n/a"} (waiting for the SDK callback instead of resetting)",
+            )
+            updateDebug {
+                it.copy(
+                    init = "Init: NO CALLBACK ${initElapsedMs()}ms",
+                    initDetail = "state=${state ?: "n/a"} ${sdkDiagnostics()}",
+                    reason = "INIT_RETRY_BLOCKED_INITIALIZING",
+                )
+            }
             return
         }
         val context = activityRef?.get()?.applicationContext ?: appContext
@@ -533,9 +641,10 @@ object UnityAdManager {
             Log.w(TAG, "UNITY_INIT_RETRY ignored: no application context")
             return
         }
-        Log.i(TAG, "UNITY_INIT_RETRY requested previousAttempt=$initAttempt")
+        Log.i(TAG, "UNITY_INIT_RETRY requested previousAttempt=$initAttempt state=${state ?: "n/a"}")
         resetSdkInitializationState()
         _isInitialized.value = false
+        initTimedOut = false
         preloadRequested = true
         updateDebug {
             it.copy(init = "Init: retrying", reason = "INIT_RETRY", lastError = "")

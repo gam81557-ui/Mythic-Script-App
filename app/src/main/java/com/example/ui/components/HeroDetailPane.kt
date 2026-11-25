@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.HeroDetailTab
@@ -123,24 +125,39 @@ fun HeroDetailPane(
             activeScript = scripts.firstOrNull { it.lifecycleState is ScriptLifecycleState.Injected },
         )
 
-        PrimaryTabRow(
-            selectedTabIndex = activeTab.ordinal,
-            containerColor = MaterialTheme.colorScheme.surface,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .liquidGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    tint = LiquidGlass.Surface,
+                    elevation = 4.dp,
+                    opacity = 0.96f,
+                ),
         ) {
-            HeroDetailTab.entries.forEach { tab ->
-                Tab(
-                    selected = tab == activeTab,
-                    onClick = { onTabSelected(tab) },
-                    text = {
-                        Text(
-                            text = tab.localizedLabel(),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                    },
-                    modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
-                )
+            PrimaryTabRow(
+                selectedTabIndex = activeTab.ordinal,
+                containerColor = Color.Transparent,
+            ) {
+                HeroDetailTab.entries.forEach { tab ->
+                    Tab(
+                        selected = tab == activeTab,
+                        onClick = { onTabSelected(tab) },
+                        selectedContentColor = LiquidGlass.TealDeep,
+                        unselectedContentColor = LiquidGlass.Muted,
+                        text = {
+                            Text(
+                                text = tab.localizedLabel(),
+                                fontWeight = if (tab == activeTab) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        },
+                        modifier = Modifier.testTag("hero_tab_${tab.name.lowercase()}"),
+                    )
+                }
             }
         }
 
@@ -186,11 +203,13 @@ private fun HeroBannerHeader(
     activeScript: SkinScriptItem?,
 ) {
     val semantic = LocalSemanticColors.current
+    val bannerShape = RoundedCornerShape(24.dp)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp)),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(bannerShape)
+            .border(1.dp, Color.White.copy(alpha = 0.68f), bannerShape),
     ) {
         Image(
             painter = painterResource(id = R.drawable.img_companion_banner),
@@ -284,14 +303,15 @@ private fun HeroBannerHeader(
 private fun BannerTagChip(text: String) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = Color(0x33FFFFFF),
-        border = BorderStroke(1.dp, Color(0x4DFFFFFF)),
+        color = LiquidGlass.SurfaceStrong,
+        border = BorderStroke(1.dp, LiquidGlass.Hairline),
         modifier = Modifier.widthIn(max = 180.dp),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
+            color = LiquidGlass.Ink,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -402,10 +422,16 @@ private fun SkinScriptsTab(
         if (scripts.isEmpty() && unavailableCountForHero > 0 && hideUnavailableSkins) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Transparent,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .liquidGlass(
+                            shape = RoundedCornerShape(20.dp),
+                            tint = LiquidGlass.Surface,
+                            elevation = 2.dp,
+                            opacity = 0.96f,
+                        )
                         .testTag("all_skins_unavailable_empty_state"),
                 ) {
                     Column(
@@ -442,9 +468,16 @@ private fun SkinScriptsTab(
         } else if (scripts.isEmpty()) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlass(
+                            shape = RoundedCornerShape(20.dp),
+                            tint = LiquidGlass.Surface,
+                            elevation = 2.dp,
+                            opacity = 0.96f,
+                        ),
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -506,23 +539,30 @@ private fun SkinScriptCard(
         isError -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)
         isActive -> BorderStroke(2.dp, semantic.active)
         isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        else -> BorderStroke(1.dp, LiquidGlass.Hairline)
     }
 
+    val cardShape = RoundedCornerShape(20.dp)
+    val glassTint = when {
+        isUnavailable -> LiquidGlass.SurfaceMuted
+        isActive -> LiquidGlass.ActiveSurface
+        isSelected -> LiquidGlass.SelectedSurface
+        else -> LiquidGlass.Surface
+    }
     Card(
         onClick = onSelect,
-        shape = RoundedCornerShape(16.dp),
+        shape = cardShape,
         border = borderStroke,
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isUnavailable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                isActive -> semantic.activeContainer.copy(alpha = 0.35f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
-                else -> MaterialTheme.colorScheme.surface
-            },
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .liquidGlass(
+                shape = cardShape,
+                tint = glassTint,
+                elevation = if (isSelected) 4.dp else 2.dp,
+                opacity = 0.96f,
+            )
             .testTag("script_card_${script.scriptId}"),
     ) {
         Column(
@@ -637,6 +677,10 @@ private fun SkinScriptCard(
                     FilledTonalButton(
                         onClick = onDownload,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            contentColor = LiquidGlass.Ink,
+                        ),
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .minimumInteractiveComponentSize()
@@ -657,6 +701,10 @@ private fun SkinScriptCard(
                     FilledTonalButton(
                         onClick = onInject,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            contentColor = LiquidGlass.Ink,
+                        ),
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .minimumInteractiveComponentSize()
@@ -874,11 +922,17 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                ),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -929,10 +983,18 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
 
         items(hero.combos) { combo ->
             Card(
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, LiquidGlass.Hairline),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -1003,10 +1065,16 @@ private fun HeroStatsCombosTab(hero: HeroProfile) {
 
         items(hero.skills) { skill ->
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Transparent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(18.dp),
+                        tint = LiquidGlass.Surface,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -1100,11 +1168,18 @@ fun DockedScriptActionBar(
     }
     val isBlockedByRemote = activeRemoteConfig != null && !activeRemoteConfig.canInjectRemotely
 
+    val barShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     Surface(
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth(),
+        shape = barShape,
+        color = Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .liquidGlass(
+                shape = barShape,
+                tint = LiquidGlass.SurfaceStrong,
+                elevation = 18.dp,
+                opacity = 0.97f,
+            ),
     ) {
         Column(
             modifier = Modifier
@@ -1165,6 +1240,7 @@ fun DockedScriptActionBar(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(
                     onClick = onInjectClick,
@@ -1173,24 +1249,30 @@ fun DockedScriptActionBar(
                         containerColor = if (isInjected) MaterialTheme.colorScheme.secondary
                         else MaterialTheme.colorScheme.primary,
                     ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.3f)
+                        .weight(1.55f)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("inject_selected_button"),
                 ) {
                     Icon(
                         imageVector = if (isInjected) Icons.Filled.Refresh else Icons.Filled.Bolt,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isInjected) {
                             stringResource(R.string.action_reinject)
                         } else {
                             stringResource(R.string.action_inject_selected)
                         },
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -1198,20 +1280,30 @@ fun DockedScriptActionBar(
                 FilledTonalButton(
                     onClick = onRestoreClick,
                     enabled = selectedScript != null && !isBusy && (hasBackup || isInjected),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = LiquidGlass.SurfaceMuted,
+                        contentColor = LiquidGlass.Ink,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.1f)
+                        .weight(1f)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("restore_original_button"),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Restore,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.action_restore_original),
-                        maxLines = 1,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -1219,7 +1311,10 @@ fun DockedScriptActionBar(
                 OutlinedButton(
                     onClick = onClearBackupClick,
                     enabled = selectedScript != null && !isBusy && hasBackup && !isInjected,
+                    contentPadding = PaddingValues(0.dp),
                     modifier = Modifier
+                        .width(48.dp)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("clear_backup_button"),
                 ) {

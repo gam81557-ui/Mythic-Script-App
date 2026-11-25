@@ -7,11 +7,13 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,11 +22,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,7 +40,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -50,8 +49,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.localization.LocaleManager
 import com.example.ui.CompanionViewModel
 import com.example.ui.MythicScriptApp
-import com.example.ui.UnityAdDebugState
 import com.example.ui.UnityAdManager
+import com.example.ui.components.GlassPillButton
+import com.example.ui.components.LiquidGlass
+import com.example.ui.components.LiquidGlassBackground
+import com.example.ui.components.LiquidGlassPanel
 import com.example.ui.theme.MythicScriptTheme
 import com.unity3d.services.banners.BannerErrorInfo
 import com.unity3d.services.banners.BannerView
@@ -66,7 +68,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+        )
         UnityAdManager.init(this)
         UnityAdManager.preload(this)
 
@@ -85,23 +96,32 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MythicScriptTheme(darkTheme = true) {
+            MythicScriptTheme(darkTheme = false) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Box(modifier = Modifier.weight(1f)) {
                             when (status) {
                                 STATUS_CHECKING -> StatusScreen {
-                                    CircularProgressIndicator(color = Color(0xFF3B82F6))
+                                    CircularProgressIndicator(color = LiquidGlass.Teal)
                                     Spacer(Modifier.height(16.dp))
-                                    Text(stringResource(R.string.status_checking_connection), color = Color.White)
+                                    Text(
+                                        stringResource(R.string.status_checking_connection),
+                                        color = LiquidGlass.Ink,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
                                 }
 
                                 STATUS_OFFLINE -> StatusScreen {
-                                    Text(stringResource(R.string.status_no_internet), color = Color.White)
+                                    Text(
+                                        stringResource(R.string.status_no_internet),
+                                        color = LiquidGlass.Ink,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
                                     Spacer(Modifier.height(16.dp))
-                                    Button(onClick = { retryCount++ }) {
-                                        Text(stringResource(R.string.action_retry))
-                                    }
+                                    GlassPillButton(
+                                        text = stringResource(R.string.action_retry),
+                                        onClick = { retryCount++ },
+                                    )
                                 }
 
                                 else -> MythicScriptApp(
@@ -118,9 +138,7 @@ class MainActivity : ComponentActivity() {
                             enabled = status == STATUS_ONLINE,
                         )
                     }
-                    if (BuildConfig.DEBUG) {
-                        AdDebugOverlay(modifier = Modifier.align(Alignment.TopEnd))
-                    }
+                    AdDebugOverlay(modifier = Modifier.align(Alignment.TopEnd))
                 }
             }
         }
@@ -151,13 +169,31 @@ private val BannerHeight = 50.dp
 
 @Composable
 private fun StatusScreen(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0F0F14)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
+    LiquidGlassBackground {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            LiquidGlassPanel(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 360.dp),
+                shape = RoundedCornerShape(32.dp),
+                tint = LiquidGlass.Surface,
+                elevation = 16.dp,
+                opacity = 0.97f,
+                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 32.dp),
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp),
+                ) {
+                    content()
+                }
+            }
+        }
     }
 }
 
@@ -298,52 +334,3 @@ internal fun UnityBanner(activity: Activity, enabled: Boolean) {
 
 private const val BANNER_MAX_LOAD_ATTEMPTS = 3
 private const val BANNER_RETRY_DELAY_MS = 15_000L
-
-@Composable
-private fun AdDebugOverlay(modifier: Modifier = Modifier) {
-    val state by UnityAdManager.debugState.collectAsStateWithLifecycle()
-    AdDebugPanel(state = state, modifier = modifier)
-}
-
-@Composable
-private fun AdDebugPanel(state: UnityAdDebugState, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .padding(6.dp)
-            .widthIn(max = 340.dp)
-            .background(Color.Black.copy(alpha = 0.78f), RoundedCornerShape(6.dp))
-            .padding(6.dp),
-    ) {
-        Text(
-            text = "AD DEBUG · test mode",
-            color = Color(0xFFFBBF24),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        listOf(
-            state.init,
-            state.initDetail,
-            state.net,
-            state.banner,
-            state.rewarded,
-            state.interstitial,
-            state.gate,
-            "reason=${state.reason}",
-        ).filter { it.isNotBlank() }.forEach { line ->
-            Text(text = line, color = Color.White, fontSize = 9.sp)
-        }
-        if (state.lastError.isNotBlank()) {
-            Text(
-                text = "Last error: ${state.lastError}",
-                color = Color(0xFFF87171),
-                fontSize = 9.sp,
-                maxLines = 4,
-            )
-        }
-        if (state.reason == "INIT_TIMEOUT" || state.reason.startsWith("INIT_FAIL")) {
-            TextButton(onClick = { UnityAdManager.retryInit() }) {
-                Text(text = "RETRY INIT", color = Color(0xFFFBBF24), fontSize = 9.sp)
-            }
-        }
-    }
-}

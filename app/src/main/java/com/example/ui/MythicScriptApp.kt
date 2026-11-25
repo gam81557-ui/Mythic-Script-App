@@ -23,12 +23,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.ui.components.CompanionTopAppBar
+import com.example.ui.components.LiquidGlassBackground
 import com.example.ui.components.ConfirmClearBackupDialog
 import com.example.ui.components.DisclaimerDetailsDialog
 import com.example.ui.components.DisclaimerWarningBanner
@@ -88,21 +90,23 @@ fun MythicScriptApp(
             }
         }
 
-        Scaffold(
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            topBar = {
-                CompanionTopAppBar(
-                    showBackButton = !isExpandedLayout && isShowingCompactDetail,
-                    shizukuState = uiState.shizukuState,
-                    targetPackage = uiState.targetPackage,
-                    onBackClick = { isShowingCompactDetail = false },
-                    onShizukuStatusClick = viewModel::handleShizukuStatusClick,
-                    onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
-                    onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
-                    onToggleLanguage = onToggleLanguage,
-                )
-            },
-        ) { innerPadding ->
+        LiquidGlassBackground {
+            Scaffold(
+                containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                topBar = {
+                    CompanionTopAppBar(
+                        showBackButton = !isExpandedLayout && isShowingCompactDetail,
+                        shizukuState = uiState.shizukuState,
+                        targetPackage = uiState.targetPackage,
+                        onBackClick = { isShowingCompactDetail = false },
+                        onShizukuStatusClick = viewModel::handleShizukuStatusClick,
+                        onSettingsClick = { viewModel.setDiagnosticsSheetVisible(true) },
+                        onShowDisclaimerClick = { viewModel.setDisclaimerDialogVisible(true) },
+                        onToggleLanguage = onToggleLanguage,
+                    )
+                },
+            ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -223,6 +227,7 @@ fun MythicScriptApp(
                         )
                     }
                 }
+            }
             }
         }
     }

@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -49,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -60,8 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.data.remote.RemoteConfigState
 import com.example.domain.model.ScriptLifecycleState
@@ -82,13 +78,23 @@ fun CompanionTopAppBar(
     onSettingsClick: () -> Unit,
     onShowDisclaimerClick: () -> Unit,
     onToggleLanguage: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val isBurmese = LocaleManager.isBurmese(context)
 
     CenterAlignedTopAppBar(
+        modifier = modifier
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .liquidGlass(
+                shape = RoundedCornerShape(30.dp),
+                tint = LiquidGlass.Surface,
+                elevation = 8.dp,
+                opacity = 0.94f,
+            ),
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = Color.Transparent,
+            scrolledContainerColor = Color.Transparent,
         ),
         navigationIcon = {
             if (showBackButton) {
@@ -101,6 +107,7 @@ fun CompanionTopAppBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.cd_back_to_heroes),
+                        tint = LiquidGlass.Ink,
                     )
                 }
             } else {
@@ -113,7 +120,7 @@ fun CompanionTopAppBar(
                     Icon(
                         imageVector = Icons.Filled.Info,
                         contentDescription = stringResource(R.string.cd_script_safety_notice),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = LiquidGlass.TealDeep,
                     )
                 }
             }
@@ -123,13 +130,15 @@ fun CompanionTopAppBar(
                 Text(
                     text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = LiquidGlass.Ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = targetPackage,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LiquidGlass.Muted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -153,6 +162,7 @@ fun CompanionTopAppBar(
                 Icon(
                     imageVector = Icons.Filled.Settings,
                     contentDescription = stringResource(R.string.cd_settings_diagnostics),
+                    tint = LiquidGlass.Ink,
                 )
             }
         },
@@ -169,11 +179,16 @@ private fun LanguageToggle(
     Surface(
         onClick = onToggleLanguage,
         shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = Color.Transparent,
         modifier = modifier
             .padding(end = 6.dp)
             .minimumInteractiveComponentSize()
+            .liquidGlass(
+                shape = RoundedCornerShape(50),
+                tint = LiquidGlass.SurfaceMuted,
+                elevation = 2.dp,
+                opacity = 0.94f,
+            )
             .semantics { contentDescription = languageDescription }
             .testTag("language_toggle"),
     ) {
@@ -203,10 +218,19 @@ private fun LanguageBadge(
 ) {
     Surface(
         shape = RoundedCornerShape(50),
-        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
-        else MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag(testTag),
+        color = if (selected) LiquidGlass.Teal else Color.Transparent,
+        contentColor = if (selected) Color.White else LiquidGlass.Ink,
+        modifier = Modifier
+            .then(
+                if (selected) Modifier
+                else Modifier.liquidGlass(
+                    shape = RoundedCornerShape(50),
+                    tint = LiquidGlass.Surface,
+                    elevation = 0.dp,
+                    opacity = 0.94f,
+                )
+            )
+            .testTag(testTag),
     ) {
         Text(
             text = label,
@@ -268,11 +292,17 @@ fun ShizukuStatusPill(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
-        color = bgColor,
+        color = Color.Transparent,
         modifier = modifier
             .padding(end = 4.dp)
             .minimumInteractiveComponentSize()
             .widthIn(max = 132.dp)
+            .liquidGlass(
+                shape = RoundedCornerShape(50),
+                tint = bgColor,
+                elevation = 2.dp,
+                opacity = 0.96f,
+            )
             .semantics { contentDescription = actionDescription }
             .testTag("shizuku_status_pill"),
     ) {
@@ -312,10 +342,15 @@ fun DisclaimerWarningBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
+                .liquidGlass(
+                    shape = RoundedCornerShape(20.dp),
+                    tint = LiquidGlass.WarningSurface,
+                    elevation = 4.dp,
+                    opacity = 0.96f,
+                )
                 .testTag("disclaimer_warning_banner"),
-            shape = RoundedCornerShape(14.dp),
-            color = semantic.warningContainer,
-            border = BorderStroke(1.dp, semantic.warning.copy(alpha = 0.4f)),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.Transparent,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -334,19 +369,24 @@ fun DisclaimerWarningBanner(
                     Text(
                         text = stringResource(R.string.disclaimer_title),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        color = LiquidGlass.Ink,
                     )
                     Text(
                         text = stringResource(R.string.disclaimer_body),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = LiquidGlass.Muted,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(
                             onClick = onLearnMore,
                             modifier = Modifier.testTag("disclaimer_details_button"),
                         ) {
-                            Text(stringResource(R.string.risk_backup_rules))
+                            Text(
+                                text = stringResource(R.string.risk_backup_rules),
+                                color = LiquidGlass.TealDeep,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
                 }
@@ -359,6 +399,7 @@ fun DisclaimerWarningBanner(
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = stringResource(R.string.cd_dismiss_safety_banner),
+                        tint = LiquidGlass.Ink,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -385,10 +426,15 @@ fun RemoteMaintenanceBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
+                .liquidGlass(
+                    shape = RoundedCornerShape(20.dp),
+                    tint = LiquidGlass.DangerSurface,
+                    elevation = 4.dp,
+                    opacity = 0.96f,
+                )
                 .testTag("remote_maintenance_banner"),
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.errorContainer,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.Transparent,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -411,21 +457,26 @@ fun RemoteMaintenanceBanner(
                             }
                         ),
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Bold,
+                        color = LiquidGlass.Ink,
                     )
                     Text(
                         text = activeConfig?.maintenanceMessage
                             ?.takeIf { it.isNotBlank() }
                             ?: stringResource(R.string.maintenance_paused_message),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        color = LiquidGlass.Muted,
                     )
                 }
                 TextButton(
                     onClick = onRetry,
                     modifier = Modifier.testTag("retry_remote_config_banner_button"),
                 ) {
-                    Text(stringResource(R.string.action_refresh))
+                    Text(
+                        text = stringResource(R.string.action_refresh),
+                        color = LiquidGlass.TealDeep,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             }
         }
@@ -479,43 +530,46 @@ fun ScriptLifecycleChip(
 fun DisclaimerDetailsDialog(
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    LiquidGlassDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = null,
-                tint = LocalSemanticColors.current.warning,
+        icon = Icons.Filled.Warning,
+        iconTint = LocalSemanticColors.current.warning,
+        title = stringResource(R.string.disclaimer_title),
+        cardTag = "disclaimer_dialog",
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 280.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.disclaimer_paragraph_1),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LiquidGlass.Muted,
             )
-        },
-        title = {
-            Text(text = stringResource(R.string.disclaimer_title))
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.disclaimer_paragraph_1),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.disclaimer_paragraph_2),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.disclaimer_paragraph_3),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag("close_disclaimer_dialog_button"),
-            ) {
-                Text(stringResource(R.string.action_understood))
-            }
-        },
-    )
+            Text(
+                text = stringResource(R.string.disclaimer_paragraph_2),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LiquidGlass.Muted,
+            )
+            Text(
+                text = stringResource(R.string.disclaimer_paragraph_3),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LiquidGlass.Muted,
+            )
+        }
+        GlassPillButton(
+            text = stringResource(R.string.action_understood),
+            onClick = onDismiss,
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 240.dp),
+            style = GlassButtonStyle.Primary,
+            testTag = "close_disclaimer_dialog_button",
+        )
+    }
 }
 
 @Composable
@@ -524,12 +578,7 @@ fun NotificationDialog(
     message: String,
     onDismiss: () -> Unit,
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        NotificationDialogContent(title = title, message = message, onDismiss = onDismiss)
-    }
+    NotificationDialogContent(title = title, message = message, onDismiss = onDismiss)
 }
 
 @Composable
@@ -538,144 +587,49 @@ internal fun NotificationDialogContent(
     message: String,
     onDismiss: () -> Unit,
 ) {
-    val cardShape = RoundedCornerShape(30.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .testTag("remote_notice_dialog_root"),
-        contentAlignment = Alignment.Center,
+    LiquidGlassDialog(
+        onDismissRequest = onDismiss,
+        icon = Icons.Filled.Info,
+        iconTint = LiquidGlass.TealDeep,
+        title = title,
+        titleTag = "notice_dialog_title",
+        cardTag = "remote_notice_dialog",
+        badgeTag = "notice_info_badge",
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 420.dp),
+                .heightIn(max = 220.dp)
+                .verticalScroll(rememberScrollState()),
         ) {
-            Column(
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LiquidGlass.Muted,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 30.dp)
-                    .shadow(elevation = 28.dp, shape = cardShape, clip = false)
-                    .clip(cardShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color(0xFFF8F8FA).copy(alpha = 0.95f),
-                                Color(0xFFE7E8ED).copy(alpha = 0.90f),
-                            )
-                        )
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.78f), cardShape)
-                    .padding(start = 26.dp, end = 26.dp, top = 48.dp, bottom = 24.dp)
-                    .testTag("remote_notice_dialog"),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF303138),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("notice_dialog_title"),
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 220.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF55575F),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                            .testTag("notice_dialog_message"),
-                    )
-                }
-                Spacer(modifier = Modifier.height(22.dp))
-                Row(
-                    modifier = Modifier
-                        .widthIn(max = 280.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NoticePillButton(
-                        text = stringResource(R.string.action_got_it),
-                        color = Color(0xFF00B7C7),
-                        testTag = "notice_got_it_button",
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                    )
-                    NoticePillButton(
-                        text = stringResource(R.string.action_close),
-                        color = Color(0xFFFE1B1B),
-                        testTag = "notice_close_button",
-                        modifier = Modifier.weight(1f),
-                        onClick = onDismiss,
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .size(64.dp)
-                    .shadow(elevation = 14.dp, shape = CircleShape, clip = false)
-                    .clip(CircleShape)
-                    .background(Color(0xFFF7F7F9))
-                    .border(1.dp, Color.White, CircleShape)
-                    .testTag("notice_info_badge"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = stringResource(R.string.cd_notice_info),
-                    tint = Color(0xFF3B3C42),
-                    modifier = Modifier.size(32.dp),
-                )
-            }
+                    .padding(horizontal = 4.dp)
+                    .testTag("notice_dialog_message"),
+            )
         }
-    }
-}
-
-@Composable
-private fun NoticePillButton(
-    text: String,
-    color: Color,
-    testTag: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .height(48.dp)
-            .testTag(testTag),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = color,
-            contentColor = Color.White,
-        ),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 0.dp,
-        ),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Spacer(modifier = Modifier.height(8.dp))
+        GlassDialogActions(modifier = Modifier.widthIn(max = 320.dp)) {
+            GlassPillButton(
+                text = stringResource(R.string.action_got_it),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Primary,
+                testTag = "notice_got_it_button",
+            )
+            GlassPillButton(
+                text = stringResource(R.string.action_close),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Danger,
+                testTag = "notice_close_button",
+            )
+        }
     }
 }
 

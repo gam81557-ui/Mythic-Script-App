@@ -80,7 +80,7 @@ fun RemoteArtworkImage(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF141C2E)),
+                    .background(Color.White.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator(
@@ -120,9 +120,9 @@ private fun ArtworkFallbackBox(
         modifier = modifier.background(
             Brush.verticalGradient(
                 colors = listOf(
-                    accentColor.copy(alpha = 0.28f),
-                    Color(0xFF141C2E),
-                    Color(0xFF0C111D),
+                    accentColor.copy(alpha = 0.24f),
+                    Color.White.copy(alpha = 0.34f),
+                    Color(0xFFC8CDD6),
                 )
             )
         ),
@@ -135,14 +135,14 @@ private fun ArtworkFallbackBox(
             Icon(
                 imageVector = Icons.Filled.Shield,
                 contentDescription = null,
-                tint = accentColor.copy(alpha = 0.85f),
+                tint = accentColor.copy(alpha = 0.90f),
                 modifier = Modifier.size(22.dp),
             )
             Text(
                 text = initials,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFE2E8F0),
+                color = LiquidGlass.Ink,
             )
         }
     }

@@ -90,7 +90,7 @@ val LocalSemanticColors = staticCompositionLocalOf {
 
 @Composable
 fun MythicScriptTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
@@ -113,11 +113,11 @@ fun MythicScriptTheme(
         )
     } else {
         SemanticStatusColors(
-            active = StatusActiveGreen,
-            activeContainer = StatusActiveGreenContainerLight,
-            warning = StatusWarningAmber,
-            warningContainer = StatusWarningAmberContainerLight,
-            info = StatusInfoCyan,
+            active = Color(0xFF0E9F6E),
+            activeContainer = Color(0xFFD8F7E8),
+            warning = Color(0xFFB87500),
+            warningContainer = Color(0xFFFFF0CE),
+            info = PrimaryLight,
         )
     }
 

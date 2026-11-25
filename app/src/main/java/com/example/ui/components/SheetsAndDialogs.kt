@@ -9,25 +9,27 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FolderZip
-import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -84,12 +87,23 @@ fun ImportZipConfirmationSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = LiquidGlass.SheetSurface,
+        scrimColor = LiquidGlass.Scrim,
+        tonalElevation = 0.dp,
+        dragHandle = { GlassSheetHandle() },
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .liquidGlass(
+                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                    tint = LiquidGlass.SheetSurface,
+                    elevation = 16.dp,
+                    opacity = 0.97f,
+                )
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
@@ -99,12 +113,14 @@ fun ImportZipConfirmationSheet(
                 Icon(
                     imageVector = Icons.Filled.FolderZip,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = LiquidGlass.TealDeep,
                 )
                 Column {
                     Text(
                         text = stringResource(R.string.stage_imported_zip),
                         style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = LiquidGlass.Ink,
                     )
                     Text(
                         text = stringResource(
@@ -113,7 +129,7 @@ fun ImportZipConfirmationSheet(
                             Formatter.formatShortFileSize(context, preview.totalBytes),
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = LiquidGlass.Muted,
                     )
                 }
             }
@@ -121,6 +137,8 @@ fun ImportZipConfirmationSheet(
             Text(
                 text = stringResource(R.string.assign_target_hero),
                 style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = LiquidGlass.Ink,
             )
             Row(
                 modifier = Modifier
@@ -133,6 +151,19 @@ fun ImportZipConfirmationSheet(
                         selected = hero.id == selectedHeroId,
                         onClick = { selectedHeroId = hero.id },
                         label = { Text(hero.name) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            labelColor = LiquidGlass.Ink,
+                            selectedContainerColor = LiquidGlass.Teal,
+                            selectedLabelColor = Color.White,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = hero.id == selectedHeroId,
+                            borderColor = LiquidGlass.Hairline,
+                            selectedBorderColor = Color.White.copy(alpha = 0.72f),
+                        ),
+                        shape = RoundedCornerShape(50),
                         modifier = Modifier.testTag("import_hero_chip_${hero.id}"),
                     )
                 }
@@ -143,6 +174,8 @@ fun ImportZipConfirmationSheet(
                 onValueChange = { skinName = it },
                 label = { Text(stringResource(R.string.skin_script_name)) },
                 singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                colors = glassTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("import_skin_name_input"),
@@ -157,6 +190,8 @@ fun ImportZipConfirmationSheet(
                     onValueChange = { tierTag = it },
                     label = { Text(stringResource(R.string.tier_tag)) },
                     singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = glassTextFieldColors(),
                     modifier = Modifier.weight(1f),
                 )
                 OutlinedTextField(
@@ -164,6 +199,8 @@ fun ImportZipConfirmationSheet(
                     onValueChange = { version = it },
                     label = { Text(stringResource(R.string.version)) },
                     singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = glassTextFieldColors(),
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -173,13 +210,22 @@ fun ImportZipConfirmationSheet(
                 onValueChange = { notes = it },
                 label = { Text(stringResource(R.string.compatibility_notes)) },
                 maxLines = 2,
+                shape = RoundedCornerShape(18.dp),
+                colors = glassTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
 
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Transparent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(18.dp),
+                        tint = LiquidGlass.SurfaceMuted,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(12.dp),
@@ -188,19 +234,21 @@ fun ImportZipConfirmationSheet(
                     Text(
                         text = stringResource(R.string.verified_target_paths),
                         style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LiquidGlass.Ink,
                     )
                     preview.relativeTargetPaths.take(5).forEach { rel ->
                         Text(
                             text = "• $rel",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = LiquidGlass.Muted,
                         )
                     }
                     if (preview.relativeTargetPaths.size > 5) {
                         Text(
                             text = stringResource(R.string.more_files, preview.relativeTargetPaths.size - 5),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = LiquidGlass.TealDeep,
                         )
                     }
                 }
@@ -212,23 +260,19 @@ fun ImportZipConfirmationSheet(
                     .padding(top = 4.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(
+                GlassPillButton(
+                    text = stringResource(R.string.action_cancel),
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .weight(1f)
-                        .minimumInteractiveComponentSize(),
-                ) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-                Button(
+                    modifier = Modifier.weight(1f),
+                    style = GlassButtonStyle.Neutral,
+                )
+                GlassPillButton(
+                    text = stringResource(R.string.action_stage_script),
                     onClick = { onConfirm(selectedHeroId, skinName, tierTag, version, notes) },
                     modifier = Modifier
                         .weight(1f)
-                        .minimumInteractiveComponentSize()
                         .testTag("confirm_import_bundle_button"),
-                ) {
-                    Text(stringResource(R.string.action_stage_script))
-                }
+                )
             }
         }
     }
@@ -257,111 +301,89 @@ fun ShizukuGuideDialog(
             stringResource(R.string.shizuku_guide_disconnected)
     }
 
-    AlertDialog(
+    LiquidGlassDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Security,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        },
-        title = {
+        icon = Icons.Filled.Security,
+        iconTint = LiquidGlass.TealDeep,
+        title = stringResource(R.string.shizuku_guide_title),
+        titleTag = "shizuku_guide_title",
+        cardTag = "shizuku_guide_dialog",
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 220.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Text(
-                text = stringResource(R.string.shizuku_guide_title),
-                modifier = Modifier.testTag("shizuku_guide_title"),
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LiquidGlass.Muted,
+                modifier = Modifier.testTag("shizuku_guide_message"),
             )
-        },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+            HorizontalDivider(color = LiquidGlass.Hairline)
+            Text(
+                text = stringResource(R.string.shizuku_how_to_start),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = LiquidGlass.Ink,
+            )
+            Text(
+                text = stringResource(R.string.shizuku_how_to_start_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = LiquidGlass.Muted,
+            )
+            GlassPillButton(
+                text = stringResource(R.string.action_watch_tutorial),
+                onClick = onWatchTutorial,
+                modifier = Modifier.fillMaxWidth(),
+                style = GlassButtonStyle.Neutral,
+                icon = Icons.Filled.PlayArrow,
+                testTag = "shizuku_watch_tutorial_button",
+            )
+            Text(
+                text = stringResource(R.string.shizuku_tutorial_credit),
+                style = MaterialTheme.typography.bodySmall,
+                color = LiquidGlass.TealDeep,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.testTag("shizuku_tutorial_credit"),
+            )
+            if (state == ShizukuConnectionState.NotInstalled) {
                 Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("shizuku_guide_message"),
-                )
-                HorizontalDivider()
-                Text(
-                    text = stringResource(R.string.shizuku_how_to_start),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    text = stringResource(R.string.shizuku_how_to_start_body),
+                    text = stringResource(R.string.msg_shizuku_not_installed),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LiquidGlass.Red,
+                    modifier = Modifier.testTag("shizuku_not_installed_fallback"),
                 )
-                OutlinedButton(
-                    onClick = onWatchTutorial,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .minimumInteractiveComponentSize()
-                        .testTag("shizuku_watch_tutorial_button"),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_watch_tutorial))
-                }
-                Text(
-                    text = stringResource(R.string.shizuku_tutorial_credit),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.testTag("shizuku_tutorial_credit"),
-                )
-                if (state == ShizukuConnectionState.NotInstalled) {
-                    Text(
-                        text = stringResource(R.string.msg_shizuku_not_installed),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.testTag("shizuku_not_installed_fallback"),
-                    )
-                }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = onOpenShizukuApp,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("shizuku_open_app_button"),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Launch,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(stringResource(R.string.action_open_shizuku))
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(
-                    onClick = onRefresh,
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .testTag("shizuku_guide_refresh"),
-                ) {
-                    Text(stringResource(R.string.action_refresh))
-                }
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .testTag("shizuku_guide_close"),
-                ) {
-                    Text(stringResource(R.string.action_close))
-                }
-            }
-        },
-    )
+        }
+        GlassPillButton(
+            text = stringResource(R.string.action_open_shizuku),
+            onClick = onOpenShizukuApp,
+            modifier = Modifier.fillMaxWidth(),
+            style = GlassButtonStyle.Primary,
+            icon = Icons.AutoMirrored.Filled.Launch,
+            testTag = "shizuku_open_app_button",
+        )
+        GlassDialogActions(modifier = Modifier.widthIn(max = 320.dp)) {
+            GlassPillButton(
+                text = stringResource(R.string.action_refresh),
+                onClick = onRefresh,
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Neutral,
+                icon = Icons.Filled.Refresh,
+                testTag = "shizuku_guide_refresh",
+            )
+            GlassPillButton(
+                text = stringResource(R.string.action_close),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Neutral,
+                testTag = "shizuku_guide_close",
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -391,24 +413,43 @@ fun PackageAndDiagnosticsSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = LiquidGlass.SheetSurface,
+        scrimColor = LiquidGlass.Scrim,
+        tonalElevation = 0.dp,
+        dragHandle = { GlassSheetHandle() },
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .liquidGlass(
+                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                    tint = LiquidGlass.SheetSurface,
+                    elevation = 16.dp,
+                    opacity = 0.97f,
+                )
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(
                 text = stringResource(R.string.shizuku_target_package),
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = LiquidGlass.Ink,
             )
 
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = Color.Transparent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        tint = LiquidGlass.SurfaceMuted,
+                        elevation = 2.dp,
+                        opacity = 0.96f,
+                    ),
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -431,6 +472,8 @@ fun PackageAndDiagnosticsSheet(
                             Text(
                                 text = stringResource(R.string.shizuku_aidl_service),
                                 style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = LiquidGlass.Ink,
                             )
                         }
                         ShizukuStatusPill(
@@ -467,7 +510,7 @@ fun PackageAndDiagnosticsSheet(
                             }
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = LiquidGlass.Muted,
                     )
 
                     Row(
@@ -476,77 +519,58 @@ fun PackageAndDiagnosticsSheet(
                     ) {
                         when (shizukuState) {
                             is ShizukuConnectionState.PermissionDenied -> {
-                                Button(
+                                GlassPillButton(
+                                    text = stringResource(R.string.action_grant_permission),
                                     onClick = onRequestPermission,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .minimumInteractiveComponentSize()
-                                        .testTag("sheet_request_shizuku_permission"),
-                                ) {
-                                    Text(stringResource(R.string.action_grant_permission))
-                                }
+                                    modifier = Modifier.weight(1f),
+                                    testTag = "sheet_request_shizuku_permission",
+                                )
                             }
                             ShizukuConnectionState.PermissionGranted,
                             is ShizukuConnectionState.ServiceDisconnected,
                             -> {
-                                Button(
+                                GlassPillButton(
+                                    text = stringResource(R.string.action_bind_service),
                                     onClick = onBindUserService,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .minimumInteractiveComponentSize()
-                                        .testTag("sheet_bind_shizuku_service"),
-                                ) {
-                                    Text(stringResource(R.string.action_bind_service))
-                                }
+                                    modifier = Modifier.weight(1f),
+                                    testTag = "sheet_bind_shizuku_service",
+                                )
                             }
                             ShizukuConnectionState.NotRunning -> {
-                                Button(
+                                GlassPillButton(
+                                    text = stringResource(R.string.action_open_shizuku),
                                     onClick = onOpenShizukuApp,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .minimumInteractiveComponentSize(),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Launch,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.action_open_shizuku))
-                                }
+                                    modifier = Modifier.weight(1f),
+                                    icon = Icons.AutoMirrored.Filled.Launch,
+                                )
                             }
                             else -> Unit
                         }
 
-                        OutlinedButton(
+                        GlassPillButton(
+                            text = stringResource(R.string.action_refresh),
                             onClick = onRefreshShizuku,
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .testTag("sheet_refresh_shizuku"),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.action_refresh))
-                        }
+                            style = GlassButtonStyle.Neutral,
+                            icon = Icons.Filled.Refresh,
+                            testTag = "sheet_refresh_shizuku",
+                        )
                     }
                 }
             }
 
-            HorizontalDivider()
+            HorizontalDivider(color = LiquidGlass.Hairline)
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(R.string.target_package_override),
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = LiquidGlass.Ink,
                 )
                 Text(
                     text = stringResource(R.string.target_package_note),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LiquidGlass.Muted,
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -557,6 +581,19 @@ fun PackageAndDiagnosticsSheet(
                             onUpdateTargetPackage(AppPreferences.DEFAULT_TARGET_PACKAGE)
                         },
                         label = { Text(stringResource(R.string.global_package, AppPreferences.DEFAULT_TARGET_PACKAGE)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = LiquidGlass.SurfaceMuted,
+                            labelColor = LiquidGlass.Ink,
+                            selectedContainerColor = LiquidGlass.Teal,
+                            selectedLabelColor = Color.White,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = packageInput.trim() == AppPreferences.DEFAULT_TARGET_PACKAGE,
+                            borderColor = LiquidGlass.Hairline,
+                            selectedBorderColor = Color.White.copy(alpha = 0.72f),
+                        ),
+                        shape = RoundedCornerShape(50),
                         modifier = Modifier.testTag("preset_global_package_chip"),
                     )
                 }
@@ -578,24 +615,23 @@ fun PackageAndDiagnosticsSheet(
                         )
                     },
                     singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = glassTextFieldColors(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("custom_package_input"),
                 )
 
-                Button(
+                GlassPillButton(
+                    text = stringResource(R.string.action_save_target_package),
                     onClick = { onUpdateTargetPackage(packageInput.trim()) },
                     enabled = isPackageValid && packageInput.trim() != targetPackage,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .minimumInteractiveComponentSize()
-                        .testTag("apply_package_override_button"),
-                ) {
-                    Text(stringResource(R.string.action_save_target_package))
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "apply_package_override_button",
+                )
             }
 
-            HorizontalDivider()
+            HorizontalDivider(color = LiquidGlass.Hairline)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -609,12 +645,14 @@ fun PackageAndDiagnosticsSheet(
                     Icon(
                         imageVector = Icons.Filled.Storage,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = LiquidGlass.TealDeep,
                     )
                     Column {
                         Text(
                             text = stringResource(R.string.app_private_backup),
                             style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = LiquidGlass.Ink,
                         )
                         Text(
                             text = stringResource(
@@ -622,18 +660,20 @@ fun PackageAndDiagnosticsSheet(
                             Formatter.formatShortFileSize(context, totalBackupBytes),
                         ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = LiquidGlass.Muted,
                         )
                     }
                 }
                 if (disclaimerDismissed) {
-                    TextButton(onClick = onRestoreDisclaimer) {
-                        Text(stringResource(R.string.action_show_banner))
-                    }
+                    GlassPillButton(
+                        text = stringResource(R.string.action_show_banner),
+                        onClick = onRestoreDisclaimer,
+                        style = GlassButtonStyle.Neutral,
+                    )
                 }
             }
 
-            HorizontalDivider()
+            HorizontalDivider(color = LiquidGlass.Hairline)
 
             Column(
                 modifier = Modifier
@@ -649,21 +689,16 @@ fun PackageAndDiagnosticsSheet(
                     Text(
                         text = stringResource(R.string.github_remote_config),
                         style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = LiquidGlass.Ink,
                     )
-                    OutlinedButton(
+                    GlassPillButton(
+                        text = stringResource(R.string.action_sync_config),
                         onClick = onRefreshRemoteConfig,
-                        modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .testTag("sync_remote_config_button"),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.action_sync_config))
-                    }
+                        style = GlassButtonStyle.Neutral,
+                        icon = Icons.Filled.Refresh,
+                        testTag = "sync_remote_config_button",
+                    )
                 }
                 Text(
                     text = when (remoteConfigState) {
@@ -685,7 +720,7 @@ fun PackageAndDiagnosticsSheet(
                             stringResource(R.string.offline_fallback, remoteConfigState.errorMessage)
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LiquidGlass.Muted,
                 )
             }
         }
@@ -698,34 +733,33 @@ fun ConfirmClearBackupDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    LiquidGlassDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = null,
-                tint = LocalSemanticColors.current.warning,
+        icon = Icons.Filled.Warning,
+        iconTint = LocalSemanticColors.current.warning,
+        title = stringResource(R.string.clear_backup_title),
+        cardTag = "confirm_clear_backup_dialog",
+    ) {
+        Text(
+            text = stringResource(R.string.clear_backup_message, skinName),
+            style = MaterialTheme.typography.bodyMedium,
+            color = LiquidGlass.Muted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        GlassDialogActions(modifier = Modifier.widthIn(max = 340.dp)) {
+            GlassPillButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Neutral,
             )
-        },
-        title = { Text(stringResource(R.string.clear_backup_title)) },
-        text = {
-            Text(
-                text = stringResource(R.string.clear_backup_message, skinName),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            Button(
+            GlassPillButton(
+                text = stringResource(R.string.action_clear_backup),
                 onClick = onConfirm,
-                modifier = Modifier.testTag("confirm_clear_backup_dialog_button"),
-            ) {
-                Text(stringResource(R.string.action_clear_backup))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        },
-    )
+                modifier = Modifier.weight(1f),
+                style = GlassButtonStyle.Danger,
+                testTag = "confirm_clear_backup_dialog_button",
+            )
+        }
+    }
 }
