@@ -13,6 +13,7 @@ import com.example.data.catalog.HeroRoleMapper
 import com.example.data.files.InjectionPipelineManager
 import com.example.data.files.RemoteSkinUnavailableException
 import com.example.data.files.ScriptArchiveManager
+import com.example.data.files.ShizukuRequiredException
 import com.example.data.local.AppPreferences
 import com.example.data.local.BackupEntryEntity
 import com.example.data.local.CompanionDatabase
@@ -25,7 +26,6 @@ import com.example.data.repository.CompanionRepository
 import com.example.localization.LocaleManager
 import com.example.localization.localizedLabel
 import com.example.localization.localizedMessage
-import com.example.localization.localizedShortLabel
 import com.example.domain.model.HeroAttributes
 import com.example.domain.model.HeroDetailTab
 import com.example.domain.model.HeroProfile
@@ -136,9 +136,6 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     .getOrDefault("Operation failed")
             }
         }
-
-    private fun shizukuLabel(state: ShizukuConnectionState): String =
-        state.localizedShortLabel(LocaleManager.localizedContext(getApplication()))
 
     private fun errorMessage(error: Throwable, fallbackRes: Int): String =
         error.localizedMessage(LocaleManager.localizedContext(getApplication()), fallbackRes)
@@ -674,18 +671,6 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     return@onSuccess
                 }
 
-                val currentShizuku = uiState.value.shizukuState
-                if (!currentShizuku.isReadyForIo) {
-                    snackbarMessageFlow.value = tr(
-                        R.string.msg_downloaded_connect_shizuku,
-                        script.skinName,
-                        staged.relativePaths.size,
-                        shizukuLabel(currentShizuku),
-                    )
-                    showDiagnosticsSheetFlow.value = true
-                    return@onSuccess
-                }
-
                 performInjectionForScript(script = script, fromAutoDownload = true)
             }.onFailure { err ->
                 if (err is RemoteSkinUnavailableException) {
@@ -741,6 +726,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun requestShizukuPermission() {
         shizukuBridge.requestPermission()
+    }
+
+    fun notifyStoragePermissionRequired() {
+        snackbarMessageFlow.value = tr(R.string.msg_storage_permission_required)
     }
 
     fun bindShizukuService() {
@@ -894,17 +883,6 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
-        if (!uiState.value.shizukuState.isReadyForIo) {
-            val stateLabel = shizukuLabel(uiState.value.shizukuState)
-            snackbarMessageFlow.value = if (script.isDownloaded) {
-                tr(R.string.msg_downloaded_grant_shizuku, stateLabel)
-            } else {
-                tr(R.string.msg_grant_shizuku, stateLabel)
-            }
-            showDiagnosticsSheetFlow.value = true
-            return
-        }
-
         launchSafely(R.string.msg_injection_failed) {
             performInjectionForScript(script = script, fromAutoDownload = false)
         }
@@ -933,11 +911,25 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     tr(R.string.msg_injected, script.skinName)
                 }
             }.onFailure { err ->
-                snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
+                if (err is ShizukuRequiredException) {
+                    snackbarMessageFlow.value = if (fromAutoDownload) {
+                        tr(R.string.msg_downloaded_shizuku_required, script.skinName)
+                    } else {
+                        tr(R.string.msg_shizuku_required_before_inject)
+                    }
+                    showDiagnosticsSheetFlow.value = true
+                } else {
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
+                }
             }
         }.onFailure { err ->
             transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-            snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
+            if (err is ShizukuRequiredException) {
+                snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_inject)
+                showDiagnosticsSheetFlow.value = true
+            } else {
+                snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
+            }
         }
     }
 
@@ -945,12 +937,6 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         val script = uiState.value.selectedScript ?: return
         if (script.lifecycleState.isBusy) return
         val targetPkg = uiState.value.targetPackage
-
-        if (!uiState.value.shizukuState.isReadyForIo) {
-            snackbarMessageFlow.value = tr(R.string.msg_restore_requires_shizuku)
-            showDiagnosticsSheetFlow.value = true
-            return
-        }
 
         launchSafely(R.string.msg_restore_failed) {
             val result = repository.restoreScript(
@@ -965,7 +951,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
                 snackbarMessageFlow.value = tr(R.string.msg_restored, uiState.value.selectedHero.name)
             }.onFailure { err ->
-                snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)
+                if (err is ShizukuRequiredException) {
+                    snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_restore)
+                    showDiagnosticsSheetFlow.value = true
+                } else {
+                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)
+                }
             }
         }
     }

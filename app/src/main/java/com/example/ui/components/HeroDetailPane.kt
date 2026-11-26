@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import android.text.format.Formatter
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -38,7 +37,6 @@ import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -116,7 +114,6 @@ fun HeroDetailPane(
     onInjectClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onClearBackupClick: () -> Unit,
-    onOpenShizukuDiagnostics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -190,7 +187,6 @@ fun HeroDetailPane(
                 onInjectClick = onInjectClick,
                 onRestoreClick = onRestoreClick,
                 onClearBackupClick = onClearBackupClick,
-                onOpenShizukuDiagnostics = onOpenShizukuDiagnostics,
             )
         }
     }
@@ -1154,9 +1150,7 @@ fun DockedScriptActionBar(
     onInjectClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onClearBackupClick: () -> Unit,
-    onOpenShizukuDiagnostics: () -> Unit,
 ) {
-    val semantic = LocalSemanticColors.current
     val isBusy = selectedScript?.lifecycleState?.isBusy == true
     val isInjected = selectedScript?.lifecycleState is ScriptLifecycleState.Injected
     val isUnavailable = selectedScript?.isUnavailable == true
@@ -1205,35 +1199,22 @@ fun DockedScriptActionBar(
                             isUnavailable -> stringResource(R.string.unavailable_choose_other)
                             isBlockedByRemote -> stringResource(R.string.injection_paused_remote)
                             selectedScript == null -> stringResource(R.string.select_script_hint)
-                            selectedScript.isDownloaded && !shizukuState.isReadyForIo ->
-                                stringResource(R.string.downloaded_connect_shizuku, shizukuState.localizedShortLabel())
-                            !shizukuState.isReadyForIo -> stringResource(R.string.shizuku_blocked, shizukuState.localizedShortLabel())
-                            else -> stringResource(R.string.ready_via_shizuku, shizukuState.localizedShortLabel(), selectedScript.lifecycleState.localizedLabel())
+                            shizukuState.isReadyForIo -> stringResource(
+                                R.string.ready_via_shizuku,
+                                shizukuState.localizedShortLabel(),
+                                selectedScript.lifecycleState.localizedLabel(),
+                            )
+                            else -> stringResource(
+                                R.string.ready_direct_or_shizuku,
+                                selectedScript.lifecycleState.localizedLabel(),
+                            )
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isUnavailable || isBlockedByRemote) MaterialTheme.colorScheme.error
-                        else if (!shizukuState.isReadyForIo) semantic.warning
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                }
-                AnimatedVisibility(visible = !shizukuState.isReadyForIo) {
-                    OutlinedButton(
-                        onClick = onOpenShizukuDiagnostics,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .minimumInteractiveComponentSize()
-                            .testTag("action_bar_fix_shizuku"),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Shield,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_fix_shizuku))
-                    }
                 }
             }
 

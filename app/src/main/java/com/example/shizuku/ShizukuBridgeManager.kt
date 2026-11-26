@@ -14,9 +14,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import rikka.shizuku.Shizuku
 import java.io.File
 
@@ -136,7 +138,7 @@ class ShizukuBridgeManager(private val appContext: Context) {
     }
 
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
-        if (isListening) refreshStatus()
+        if (isListening) refreshStatus(bindIfNeeded = false)
     }
 
     private val binderDeadListener = Shizuku.OnBinderDeadListener {
@@ -173,7 +175,7 @@ class ShizukuBridgeManager(private val appContext: Context) {
                 )
             }.getOrDefault(false)
         }
-        runCatching { refreshStatus() }
+        runCatching { refreshStatus(bindIfNeeded = false) }
             .onFailure { err ->
                 _connectionState.value = ShizukuConnectionState.ServiceDisconnected(
                     err.message ?: "Failed to refresh Shizuku status"
@@ -193,7 +195,10 @@ class ShizukuBridgeManager(private val appContext: Context) {
         unbindUserService()
     }
 
-    fun refreshStatus(disconnectedReason: String? = null) {
+    fun refreshStatus(
+        disconnectedReason: String? = null,
+        bindIfNeeded: Boolean = true,
+    ) {
         if (!isListening) return
         if (!isShizukuInstalled()) {
             clearServiceState()
@@ -238,10 +243,12 @@ class ShizukuBridgeManager(private val appContext: Context) {
             ShizukuConnectionState.PermissionGranted
         }
 
-        if (userServiceSupported()) {
-            bindUserService()
-        } else {
-            activateShellFallback("Shizuku API 11+ is required for UserService")
+        if (bindIfNeeded) {
+            if (userServiceSupported()) {
+                bindUserService()
+            } else {
+                activateShellFallback("Shizuku API 11+ is required for UserService")
+            }
         }
     }
 
@@ -415,6 +422,22 @@ class ShizukuBridgeManager(private val appContext: Context) {
             appContext.startActivity(launchIntent)
             true
         }.getOrDefault(false)
+    }
+
+    suspend fun awaitReady(timeoutMs: Long = BIND_TIMEOUT_MS): Boolean {
+        if (!isListening) return false
+        refreshStatus()
+        if (_connectionState.value.isReadyForIo) return true
+        if (_connectionState.value !is ShizukuConnectionState.PermissionGranted) return false
+        return withTimeoutOrNull(timeoutMs) {
+            connectionState.first {
+                it.isReadyForIo ||
+                    it is ShizukuConnectionState.NotInstalled ||
+                    it is ShizukuConnectionState.NotRunning ||
+                    it is ShizukuConnectionState.PermissionDenied ||
+                    it is ShizukuConnectionState.ServiceDisconnected
+            }
+        }?.isReadyForIo == true
     }
 
     suspend fun <T> withService(block: suspend (IFileBridgeService) -> T): Result<T> =

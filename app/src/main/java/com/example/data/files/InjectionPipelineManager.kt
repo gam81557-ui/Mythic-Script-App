@@ -8,12 +8,17 @@ import com.example.data.local.CompanionDao
 import com.example.data.local.SkinScriptEntity
 import com.example.domain.model.ScriptLifecycleState
 import com.example.shizuku.IFileBridgeService
+import com.example.shizuku.LocalFileBridgeService
 import com.example.shizuku.ShizukuBridgeManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+
+class ShizukuRequiredException(
+    message: String = "Shizuku service Grant ပြီးမှ inject ပါ",
+) : IllegalStateException(message)
 
 class InjectionPipelineManager(
     private val context: Context,
@@ -80,8 +85,8 @@ class InjectionPipelineManager(
                 mkdirs()
             }
 
-            // Step 1 & 2: Back up originals + inject staged files inside a single Shizuku service lock.
-            shizukuBridge.withService { service ->
+            // Step 1 & 2: Back up originals + inject staged files through one file service.
+            withTargetService(targetPackage) { service ->
                 val existingBackups = dao.getBackupEntriesForScript(script.scriptId)
                 val backupManifest = mutableListOf<BackupEntryEntity>()
 
@@ -172,7 +177,7 @@ class InjectionPipelineManager(
         }
 
         val baseTargetDir = buildTargetPackageRoot(targetPackage)
-        shizukuBridge.withService { service ->
+        withTargetService(targetPackage) { service ->
             entries.forEachIndexed { index, entry ->
                 val progress = (index + 1).toFloat() / entries.size.toFloat()
                 onProgress(ScriptLifecycleState.Restoring(progress, entry.relativePath))
@@ -229,6 +234,20 @@ class InjectionPipelineManager(
                 }
             }
         }
+
+    private suspend fun <T> withTargetService(
+        targetPackage: String,
+        block: suspend (IFileBridgeService) -> T,
+    ): Result<T> {
+        val direct = LocalFileBridgeService()
+        if (direct.canAccess(buildTargetPackageRoot(targetPackage))) {
+            return runCatching { block(direct) }
+        }
+        if (shizukuBridge.awaitReady()) {
+            return shizukuBridge.withService(block)
+        }
+        return Result.failure(ShizukuRequiredException())
+    }
 
     private fun copyFromRemoteToLocal(
         service: IFileBridgeService,

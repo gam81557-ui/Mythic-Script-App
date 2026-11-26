@@ -1,8 +1,12 @@
 package com.example.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.domain.model.SkinScriptItem
 import com.example.ui.components.CompanionTopAppBar
 import com.example.ui.components.LiquidGlassBackground
 import com.example.ui.components.ConfirmClearBackupDialog
@@ -49,6 +54,42 @@ fun MythicScriptApp(
 ) {
     val appContext = LocalContext.current.applicationContext
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    var pendingStorageAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        val action = pendingStorageAction
+        pendingStorageAction = null
+        if (granted) action?.invoke() else viewModel.notifyStoragePermissionRequired()
+    }
+
+    fun withStoragePermission(action: () -> Unit) {
+        val needsPermission = Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            pendingStorageAction = action
+            storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            action()
+        }
+    }
+
+    val onDownloadScriptWithPermission: (SkinScriptItem) -> Unit = { script ->
+        withStoragePermission { viewModel.downloadSkinScript(script) }
+    }
+    val onInjectScriptWithPermission: (SkinScriptItem) -> Unit = { script ->
+        withStoragePermission { viewModel.injectScript(script) }
+    }
+    val onInjectSelectedWithPermission: () -> Unit = {
+        withStoragePermission { viewModel.injectSelectedScript() }
+    }
+    val onRestoreWithPermission: () -> Unit = {
+        withStoragePermission { viewModel.restoreSelectedScript() }
+    }
 
     // The ViewModel gates every download, including the auto-download behind Inject, so the
     // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
@@ -153,8 +194,8 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = viewModel::downloadSkinScript,
-                            onInjectScript = viewModel::injectScript,
+                            onDownloadScript = onDownloadScriptWithPermission,
+                            onInjectScript = onInjectScriptWithPermission,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
                                 zipPickerLauncher.launch(
@@ -166,10 +207,9 @@ fun MythicScriptApp(
                                 )
                             },
                             onDeleteCustomScript = viewModel::deleteCustomScript,
-                            onInjectClick = viewModel::injectSelectedScript,
-                            onRestoreClick = viewModel::restoreSelectedScript,
+                            onInjectClick = onInjectSelectedWithPermission,
+                            onRestoreClick = onRestoreWithPermission,
                             onClearBackupClick = { showClearBackupConfirm = true },
-                            onOpenShizukuDiagnostics = { viewModel.setDiagnosticsSheetVisible(true) },
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight(),
@@ -191,8 +231,8 @@ fun MythicScriptApp(
                             applyNavigationBarInsets = false,
                             onTabSelected = viewModel::setDetailTab,
                             onScriptSelected = viewModel::selectScript,
-                            onDownloadScript = viewModel::downloadSkinScript,
-                            onInjectScript = viewModel::injectScript,
+                            onDownloadScript = onDownloadScriptWithPermission,
+                            onInjectScript = onInjectScriptWithPermission,
                             onToggleHideUnavailable = viewModel::toggleHideUnavailableSkins,
                             onImportZipClick = {
                                 zipPickerLauncher.launch(
@@ -204,10 +244,9 @@ fun MythicScriptApp(
                                 )
                             },
                             onDeleteCustomScript = viewModel::deleteCustomScript,
-                            onInjectClick = viewModel::injectSelectedScript,
-                            onRestoreClick = viewModel::restoreSelectedScript,
+                            onInjectClick = onInjectSelectedWithPermission,
+                            onRestoreClick = onRestoreWithPermission,
                             onClearBackupClick = { showClearBackupConfirm = true },
-                            onOpenShizukuDiagnostics = { viewModel.setDiagnosticsSheetVisible(true) },
                             modifier = Modifier.weight(1f),
                         )
                     } else {

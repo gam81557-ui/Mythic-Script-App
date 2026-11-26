@@ -84,6 +84,7 @@
     <string name="downloaded_connect_shizuku">Downloaded &amp; saved • Connect Shizuku (%1$s) to inject</string>
     <string name="shizuku_blocked">Shizuku blocked: %1$s (tap pill to configure)</string>
     <string name="ready_via_shizuku">Ready via Shizuku %1$s • %2$s</string>
+    <string name="ready_direct_or_shizuku">Ready • direct storage or Shizuku if needed • %1$s</string>
     <string name="action_fix_shizuku">Fix Shizuku</string>
 
     <string name="status_idle">Idle / Not Injected</string>
@@ -200,6 +201,10 @@
     <string name="msg_injection_disabled">Script injection is currently disabled by remote configuration.</string>
     <string name="msg_downloaded_grant_shizuku">Downloaded file saved! Grant/start Shizuku UserService (%1$s) to inject.</string>
     <string name="msg_grant_shizuku">Grant/start Shizuku UserService (%1$s) to inject.</string>
+    <string name="msg_shizuku_required_before_inject">Shizuku service Grant ပြီးမှ inject ပါ</string>
+    <string name="msg_downloaded_shizuku_required">Downloaded ‘%1$s’. Shizuku service Grant ပြီးမှ inject ပါ</string>
+    <string name="msg_shizuku_required_before_restore">Shizuku service Grant ပြီးမှ restore ပါ</string>
+    <string name="msg_storage_permission_required">Storage permission is required to access /Android/data directly on this Android version.</string>
     <string name="msg_downloaded_injected">Downloaded &amp; injected ‘%1$s’ with backup saved.</string>
     <string name="msg_injected">Injected ‘%1$s’ with backup saved.</string>
     <string name="msg_injection_failed">Injection failed.</string>
