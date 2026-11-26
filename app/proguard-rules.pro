@@ -29,3 +29,11 @@
 
 # App classes accessed through reflection (Room/KSP generated code, JSON models).
 -keep class com.example.** { *; }
+
+# Shizuku starts FileBridgeUserService by class name in a separate process.
+-keep class com.example.shizuku.FileBridgeUserService { *; }
+-keep class com.example.shizuku.IFileBridgeService$Stub { *; }
+
+# The shell compatibility bridge calls Shizuku's process AIDL directly.
+-keep class moe.shizuku.server.** { *; }
+-keep class rikka.shizuku.** { *; }
