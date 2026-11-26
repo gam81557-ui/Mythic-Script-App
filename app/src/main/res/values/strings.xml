@@ -243,6 +243,7 @@
     <string name="shizuku_reason_process_disconnected">UserService process disconnected</string>
     <string name="shizuku_reason_binder_stopped">Shizuku binder stopped</string>
     <string name="shizuku_reason_bind_failed">Failed to bind UserService</string>
+    <string name="shizuku_reason_bind_timeout">UserService start timed out</string>
     <string name="shizuku_reason_unbound">Service unbound</string>
     <string name="shizuku_reason_not_connected">UserService not connected</string>
     <string name="msg_status_failed">Failed</string>

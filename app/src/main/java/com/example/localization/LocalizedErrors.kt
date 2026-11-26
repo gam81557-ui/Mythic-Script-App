@@ -59,6 +59,7 @@ fun String.localizedShizukuReason(context: Context): String = when (this) {
     "UserService process disconnected" -> context.getString(R.string.shizuku_reason_process_disconnected)
     "Shizuku binder stopped" -> context.getString(R.string.shizuku_reason_binder_stopped)
     "Failed to bind UserService" -> context.getString(R.string.shizuku_reason_bind_failed)
+    "UserService start timed out" -> context.getString(R.string.shizuku_reason_bind_timeout)
     "Service unbound" -> context.getString(R.string.shizuku_reason_unbound)
     "UserService not connected" -> context.getString(R.string.shizuku_reason_not_connected)
     else -> this
