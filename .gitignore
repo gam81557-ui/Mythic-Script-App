@@ -16,3 +16,9 @@
 local.properties
 .env
 debug.keystore
+
+# Release signing material must never be committed.
+*.jks
+*.keystore
+keystore.properties
+release-keystore.properties
