@@ -53,10 +53,8 @@ fun MythicScriptApp(
     // The ViewModel gates every download, including the auto-download behind Inject, so the
     // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
     DisposableEffect(viewModel, appContext) {
-        UnityAdManager.onGateAttached()
         val gate: (() -> Unit) -> Boolean = { onProceed ->
-            UnityAdManager.onGateRequested()
-            UnityAdManager.showRewardedThenDownload(appContext) { onProceed() }
+            StartIoAdManager.showRewardedThenDownload(appContext) { onProceed() }
         }
         viewModel.adGate = gate
         onDispose {

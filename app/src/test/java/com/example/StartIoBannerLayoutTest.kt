@@ -1,6 +1,5 @@
 package com.example
 
-import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -11,30 +10,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36], qualifiers = "w411dp-h915dp")
-class UnityBannerLayoutTest {
+class StartIoBannerLayoutTest {
 
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
     fun `banner container remains visible with a 50dp strip`() {
-        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
-
         composeRule.setContent {
             MythicScriptTheme(darkTheme = true) {
-                UnityBanner(activity = activity, enabled = false)
+                StartIoBanner()
             }
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag("unity_banner_container").assertIsDisplayed()
-        val bounds = composeRule.onNodeWithTag("unity_banner_container").getUnclippedBoundsInRoot()
+        composeRule.onNodeWithTag("startio_banner_container").assertIsDisplayed()
+        val bounds = composeRule.onNodeWithTag("startio_banner_container").getUnclippedBoundsInRoot()
         assertTrue("banner strip should be at least 50dp tall", (bounds.bottom - bounds.top) >= 50.dp)
         assertTrue("banner strip should have a positive width", (bounds.right - bounds.left) > 0.dp)
     }
