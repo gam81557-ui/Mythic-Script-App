@@ -31,9 +31,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.domain.model.SkinScriptItem
+import com.example.ui.components.AdGateLoadingDialog
 import com.example.ui.components.CompanionTopAppBar
 import com.example.ui.components.LiquidGlassBackground
 import com.example.ui.components.ConfirmClearBackupDialog
@@ -54,6 +58,22 @@ fun MythicScriptApp(
 ) {
     val appContext = LocalContext.current.applicationContext
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val adGateState by UnityAdManager.gateState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        viewModel.registerShizukuListeners()
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshShizukuEnvironment()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.unregisterShizukuListeners()
+        }
+    }
 
     var pendingStorageAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
@@ -91,8 +111,8 @@ fun MythicScriptApp(
         withStoragePermission { viewModel.restoreSelectedScript() }
     }
 
-    // The ViewModel gates every download, including the auto-download behind Inject, so the
-    // remote requireAdForDownload flag is enforced in one place. The UI only supplies the ad.
+    // The ViewModel gates downloads, Inject/Re-inject and Restore through this one callback.
+    // UnityAdManager owns the ad request, the 15s countdown and the exactly-once continuation.
     DisposableEffect(viewModel, appContext) {
         UnityAdManager.onGateAttached()
         val gate: (() -> Unit) -> Boolean = { onProceed ->
@@ -337,4 +357,6 @@ fun MythicScriptApp(
             onDismiss = { viewModel.dismissNoticeDialog() },
         )
     }
+
+    AdGateLoadingDialog(state = adGateState)
 }

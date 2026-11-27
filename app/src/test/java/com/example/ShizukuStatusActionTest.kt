@@ -19,10 +19,14 @@ class ShizukuStatusActionTest {
         )
         assertEquals(
             ShizukuStatusAction.Refresh,
+            ShizukuConnectionState.Binding.statusAction(),
+        )
+        assertEquals(
+            ShizukuStatusAction.Refresh,
             ShizukuConnectionState.ServiceConnected(2000, "UID 2000 Shell").statusAction(),
         )
         assertEquals(
-            ShizukuStatusAction.ShowGuide,
+            ShizukuStatusAction.Refresh,
             ShizukuConnectionState.ServiceDisconnected("Binder stopped").statusAction(),
         )
         assertEquals(

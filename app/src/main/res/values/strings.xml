@@ -138,7 +138,8 @@
     <string name="shizuku_not_installed_message">Shizuku (moe.shizuku.privileged.api) was not found. Install Shizuku to manage /Android/data/ on Android 11–15+.</string>
     <string name="shizuku_not_running_message">Shizuku is installed, but its background binder is not running. Start Shizuku via Wireless Debugging or ADB first.</string>
     <string name="shizuku_permission_denied_message">Shizuku is running, but permission for Mythic Script is denied. Grant access to bind the UID 2000 FileBridge service.</string>
-    <string name="shizuku_permission_granted_message">Permission granted. Binding FileBridgeUserService via Shizuku…</string>
+    <string name="shizuku_permission_granted_message">Permission granted. Tap Bind Service to start the privileged FileBridge.</string>
+    <string name="shizuku_binding_message">Starting the privileged FileBridge UserService through Shizuku…</string>
     <string name="shizuku_connected_message">Privileged FileBridgeUserService is connected (%1$s). Restricted /Android/data/ I/O is active.</string>
     <string name="shizuku_disconnected_message">UserService disconnected%1$s</string>
     <string name="shizuku_disconnected_reason">: %1$s</string>
@@ -193,6 +194,9 @@
     <string name="msg_skin_unavailable_named_code">‘%1$s’ is unavailable (%2$d). Try another skin.</string>
     <string name="msg_no_download_link">No download link available for ‘%1$s’.</string>
     <string name="msg_wait_for_ad">Please wait for the current ad to finish.</string>
+    <string name="ad_gate_title">Preparing your ad</string>
+    <string name="ad_gate_message">Your action will continue automatically when the ad is ready.</string>
+    <string name="ad_gate_countdown_content_description">%1$d seconds remaining</string>
     <string name="msg_downloaded_paused">Downloaded ‘%1$s’ (%2$d file(s)). Injection paused during maintenance.</string>
     <string name="msg_downloaded_connect_shizuku">Downloaded ‘%1$s’ (%2$d file(s)). Connect Shizuku (%3$s) to inject.</string>
     <string name="msg_download_failed">Download failed for ‘%1$s’: %2$s</string>

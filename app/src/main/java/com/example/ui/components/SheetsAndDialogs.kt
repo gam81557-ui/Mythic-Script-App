@@ -295,6 +295,8 @@ fun ShizukuGuideDialog(
             stringResource(R.string.shizuku_guide_permission)
         ShizukuConnectionState.PermissionGranted ->
             stringResource(R.string.shizuku_permission_granted_message)
+        ShizukuConnectionState.Binding ->
+            stringResource(R.string.shizuku_binding_message)
         is ShizukuConnectionState.ServiceConnected ->
             stringResource(R.string.shizuku_connected_message, state.processLabel)
         is ShizukuConnectionState.ServiceDisconnected ->
@@ -492,6 +494,8 @@ fun PackageAndDiagnosticsSheet(
                                 stringResource(R.string.shizuku_permission_denied_message)
                             ShizukuConnectionState.PermissionGranted ->
                                 stringResource(R.string.shizuku_permission_granted_message)
+                            ShizukuConnectionState.Binding ->
+                                stringResource(R.string.shizuku_binding_message)
                             is ShizukuConnectionState.ServiceConnected ->
                                 stringResource(
                                     R.string.shizuku_connected_message,

@@ -165,10 +165,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     private var allowBackgroundRemoteSync: Boolean = true
 
     /**
-     * Installed by the UI layer so every download, whether triggered directly or by injection,
-     * can be gated by the rewarded ad. Returns false when another ad flow is already running.
+     * Installed by the UI layer so downloads, Inject/Re-inject and Restore can share one ad gate.
+     * Returns false when another ad flow is already running.
      */
     var adGate: ((onProceed: () -> Unit) -> Boolean)? = null
+
+    private var adGateInFlight = false
 
     private val roleFilterFlow = MutableStateFlow(HeroRole.ALL)
     private val searchQueryFlow = MutableStateFlow("")
@@ -465,7 +467,6 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     )
 
     init {
-        shizukuBridge.startListening()
         launchSafely(R.string.msg_status_failed) {
             repository.initializeCatalogIfNeeded()
         }
@@ -620,28 +621,54 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun maybeGateDownload(onProceed: () -> Unit) {
-        val gate = adGate
         val requireAd = requireAdForDownload()
         Log.d(
             "CompanionViewModel",
-            "Download gate: requireAdForDownload=$requireAd, gateAttached=${gate != null}",
+            "Download gate: requireAdForDownload=$requireAd, gateAttached=${adGate != null}",
         )
-        if (requireAd && gate != null) {
-            val accepted = runCatching { gate(onProceed) }.getOrElse { error ->
-                Log.e("CompanionViewModel", "Ad gate failed; continuing with download", error)
-                onProceed()
-                true
-            }
-            if (!accepted) {
-                snackbarMessageFlow.value = tr(R.string.msg_wait_for_ad)
-            }
-        } else {
-            if (requireAd) {
-                Log.w("CompanionViewModel", "Ad gate bypassed: UI gate is not attached")
-            } else {
-                Log.d("CompanionViewModel", "Ad gate bypassed: requireAdForDownload=false")
-            }
+        maybeGateAction(onProceed, requireAd = requireAd, label = "Download")
+    }
+
+    private fun maybeGateAction(
+        onProceed: () -> Unit,
+        requireAd: Boolean = true,
+        label: String = "Action",
+    ) {
+        if (!requireAd) {
+            Log.d("CompanionViewModel", "$label gate bypassed: ads not required")
             onProceed()
+            return
+        }
+        val gate = adGate
+        if (gate == null) {
+            Log.w("CompanionViewModel", "$label gate bypassed: UI gate is not attached")
+            onProceed()
+            return
+        }
+        if (adGateInFlight) {
+            snackbarMessageFlow.value = tr(R.string.msg_wait_for_ad)
+            return
+        }
+
+        adGateInFlight = true
+        var proceeded = false
+        val accepted = runCatching {
+            gate {
+                proceeded = true
+                adGateInFlight = false
+                onProceed()
+            }
+        }.getOrElse { error ->
+            Log.e("CompanionViewModel", "$label ad gate failed; continuing", error)
+            if (!proceeded) {
+                adGateInFlight = false
+                onProceed()
+            }
+            true
+        }
+        if (!accepted && !proceeded) {
+            adGateInFlight = false
+            snackbarMessageFlow.value = tr(R.string.msg_wait_for_ad)
         }
     }
 
@@ -705,7 +732,20 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     override fun onCleared() {
         super.onCleared()
         adGate = null
-        shizukuBridge.stopListening()
+        adGateInFlight = false
+        shizukuBridge.unregisterListeners()
+    }
+
+    fun registerShizukuListeners() {
+        shizukuBridge.registerListeners()
+    }
+
+    fun unregisterShizukuListeners() {
+        shizukuBridge.unregisterListeners()
+    }
+
+    fun refreshShizukuEnvironment() {
+        shizukuBridge.refreshStatus()
     }
 
     fun handleShizukuStatusClick() {
@@ -883,9 +923,14 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             return
         }
 
-        launchSafely(R.string.msg_injection_failed) {
-            performInjectionForScript(script = script, fromAutoDownload = false)
-        }
+        maybeGateAction(
+            onProceed = {
+                launchSafely(R.string.msg_injection_failed) {
+                    performInjectionForScript(script = script, fromAutoDownload = false)
+                }
+            },
+            label = "Inject",
+        )
     }
 
     private suspend fun performInjectionForScript(
@@ -938,27 +983,32 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         if (script.lifecycleState.isBusy) return
         val targetPkg = uiState.value.targetPackage
 
-        launchSafely(R.string.msg_restore_failed) {
-            val result = repository.restoreScript(
-                scriptId = script.scriptId,
-                targetPackage = targetPkg,
-                onProgress = { state ->
-                    transientScriptStatesFlow.value =
-                        transientScriptStatesFlow.value + (script.scriptId to state)
-                },
-            )
-            result.onSuccess {
-                transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
-                snackbarMessageFlow.value = tr(R.string.msg_restored, uiState.value.selectedHero.name)
-            }.onFailure { err ->
-                if (err is ShizukuRequiredException) {
-                    snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_restore)
-                    showDiagnosticsSheetFlow.value = true
-                } else {
-                    snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)
+        maybeGateAction(
+            onProceed = {
+                launchSafely(R.string.msg_restore_failed) {
+                    val result = repository.restoreScript(
+                        scriptId = script.scriptId,
+                        targetPackage = targetPkg,
+                        onProgress = { state ->
+                            transientScriptStatesFlow.value =
+                                transientScriptStatesFlow.value + (script.scriptId to state)
+                        },
+                    )
+                    result.onSuccess {
+                        transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
+                        snackbarMessageFlow.value = tr(R.string.msg_restored, uiState.value.selectedHero.name)
+                    }.onFailure { err ->
+                        if (err is ShizukuRequiredException) {
+                            snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_restore)
+                            showDiagnosticsSheetFlow.value = true
+                        } else {
+                            snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)
+                        }
+                    }
                 }
-            }
-        }
+            },
+            label = "Restore",
+        )
     }
 
     fun clearSelectedBackup() {

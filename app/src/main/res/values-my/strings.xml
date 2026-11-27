@@ -192,6 +192,9 @@
     <string name="msg_skin_unavailable_named_code">‘%1$s’ မရနိုင်ပါ (%2$d)။ အခြားစကင်တစ်ခုကို စမ်းကြည့်ပါ။</string>
     <string name="msg_no_download_link">‘%1$s’ အတွက် ဒေါင်းလုဒ်လင့်ခ် မရှိပါ။</string>
     <string name="msg_wait_for_ad">လက်ရှိကြော်ငြာ ပြီးဆုံးသည်အထိ စောင့်ပါ။</string>
+    <string name="ad_gate_title">သင့်ကြော်ငြာကို ပြင်ဆင်နေသည်</string>
+    <string name="ad_gate_message">ကြော်ငြာ အဆင်သင့်ဖြစ်သောအခါ သင့်လုပ်ဆောင်ချက်ကို အလိုအလျောက် ဆက်လက်လုပ်ဆောင်ပါမည်။</string>
+    <string name="ad_gate_countdown_content_description">%1$d စက္ကန့် ကျန်ရှိသည်</string>
     <string name="msg_downloaded_paused">‘%1$s’ ကို ဒေါင်းလုဒ်လုပ်ပြီး (ဖိုင် %2$d ခု)။ ပြုပြင်ထိန်းသိမ်းမှုအတွင်း ထည့်သွင်းမှု ရပ်ထားသည်။</string>
     <string name="msg_downloaded_connect_shizuku">‘%1$s’ ကို ဒေါင်းလုဒ်လုပ်ပြီး (ဖိုင် %2$d ခု)။ ထည့်သွင်းရန် Shizuku (%3$s) ကို ချိတ်ဆက်ပါ။</string>
     <string name="msg_download_failed">‘%1$s’ အတွက် ဒေါင်းလုဒ် မအောင်မြင်ပါ - %2$s</string>

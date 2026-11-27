@@ -69,4 +69,28 @@ class AdGateTest {
         viewModel.injectScript(script())
         assertEquals(2, gateCalls)
     }
+
+    @Test
+    fun `re-inject waits for the gate and duplicate taps do not start another request`() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val viewModel = CompanionViewModel(app)
+        viewModel.applyRemoteConfigForTest(requireAdConfig())
+
+        var gateCalls = 0
+        // Accepted, but deliberately does not invoke onProceed yet: this models the countdown.
+        viewModel.adGate = { _ ->
+            gateCalls++
+            true
+        }
+
+        val downloaded = script().copy(
+            downloadUrl = "",
+            isDownloaded = true,
+            lifecycleState = ScriptLifecycleState.Downloaded,
+        )
+        viewModel.injectScript(downloaded)
+        viewModel.injectScript(downloaded)
+
+        assertEquals(1, gateCalls)
+    }
 }

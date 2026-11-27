@@ -260,6 +260,12 @@ fun ShizukuStatusPill(
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.onPrimaryContainer,
             Icons.Filled.Security,
+            stringResource(R.string.shizuku_permission_granted),
+        )
+        ShizukuConnectionState.Binding -> Quad(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
+            Icons.Filled.Security,
             stringResource(R.string.shizuku_binding),
         )
         is ShizukuConnectionState.PermissionDenied -> Quad(

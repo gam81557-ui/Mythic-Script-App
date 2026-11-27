@@ -25,6 +25,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+const val AD_GATE_COUNTDOWN_SECONDS = 15
+
+data class UnityAdGateState(
+    val visible: Boolean = false,
+    val secondsRemaining: Int = AD_GATE_COUNTDOWN_SECONDS,
+    val totalSeconds: Int = AD_GATE_COUNTDOWN_SECONDS,
+)
+
 data class UnityAdDebugState(
     val init: String = "Init: idle",
     val initDetail: String = "",
@@ -38,11 +46,12 @@ data class UnityAdDebugState(
 )
 
 /**
- * Owns Unity Ads: the bottom banner and the rewarded/interstitial ad used as the download gate.
+ * Owns Unity Ads: the bottom banner and the rewarded/interstitial ad used as the action gate.
  *
  * Rewarded is preferred and interstitial is the fallback when rewarded has no fill. Only one
- * load is in flight at a time, a download requested during a load reuses it, and the download
+ * load is in flight at a time, an action requested during a load reuses it, and the action
  * callback runs exactly once when the ad closes, fails to load, fails to show, or times out.
+ * While the action waits, [gateState] exposes a 15 second countdown for the glass overlay.
  */
 object UnityAdManager {
     const val GAME_ID = "800450404"
@@ -65,9 +74,13 @@ object UnityAdManager {
     // background after this gate timeout.
     private const val PENDING_INIT_TIMEOUT_MS = 20_000L
     private const val SHOW_TIMEOUT_MS = 65_000L
+    private const val GATE_COUNTDOWN_TICK_MS = 1_000L
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
+
+    private val _gateState = MutableStateFlow(UnityAdGateState())
+    val gateState: StateFlow<UnityAdGateState> = _gateState.asStateFlow()
 
     private val _debugState = MutableStateFlow(UnityAdDebugState())
     val debugState: StateFlow<UnityAdDebugState> = _debugState.asStateFlow()
@@ -97,6 +110,8 @@ object UnityAdManager {
     private var loadTimeoutToken: Any? = null
     private var pendingTimeoutToken: Any? = null
     private var showTimeoutToken: Any? = null
+    private var gateCountdownToken: Any? = null
+    private var gateCountdownRemaining = 0
 
     fun init(activity: Activity) {
         activityRef = WeakReference(activity)
@@ -145,6 +160,7 @@ object UnityAdManager {
 
         pendingDownload = onDownload
         appContext = context.applicationContext
+        startGateCountdown()
 
         when {
             rewardedReady -> showAd(activity, REWARDED_PLACEMENT)
@@ -169,6 +185,7 @@ object UnityAdManager {
         loadTimeoutToken = null
         pendingTimeoutToken = null
         showTimeoutToken = null
+        cancelGateCountdown()
         pendingDownload = null
         showing = false
         loadingPlacement = null
@@ -778,6 +795,7 @@ object UnityAdManager {
     private fun showAd(activity: Activity, placementId: String) {
         cancelLoadTimeout()
         cancelPendingTimeout()
+        cancelGateCountdown()
         showing = true
 
         val isRewarded = placementId == REWARDED_PLACEMENT
@@ -874,10 +892,76 @@ object UnityAdManager {
         cancelLoadTimeout()
         cancelPendingTimeout()
         cancelShowTimeout()
+        cancelGateCountdown()
         val action = pendingDownload ?: return
+        // If the gate expired while a load was still in flight, invalidate that load so the
+        // next action can start a fresh request instead of waiting on a callback that may
+        // never arrive.
+        if (loadingPlacement != null) {
+            loadGeneration++
+            loadingPlacement = null
+            rewardedReady = false
+            interstitialReady = false
+            updateDebug {
+                it.copy(
+                    gate = "Gate: abandoned in-flight load",
+                    lastError = "ad gate expired before a fill arrived",
+                )
+            }
+            Log.w(TAG, "Abandoned in-flight ad load because the gate expired")
+        }
         pendingDownload = null
         runCatching { action() }
             .onFailure { Log.e(TAG, "Pending download callback failed", it) }
+    }
+
+    private fun startGateCountdown() {
+        cancelGateCountdown()
+        gateCountdownRemaining = AD_GATE_COUNTDOWN_SECONDS
+        _gateState.value = UnityAdGateState(
+            visible = true,
+            secondsRemaining = gateCountdownRemaining,
+            totalSeconds = AD_GATE_COUNTDOWN_SECONDS,
+        )
+        updateDebug { it.copy(gate = "Gate: countdown ${gateCountdownRemaining}s") }
+
+        val token = Any()
+        gateCountdownToken = token
+        val ticker = object : Runnable {
+            override fun run() {
+                if (gateCountdownToken !== token) return
+                gateCountdownRemaining = (gateCountdownRemaining - 1).coerceAtLeast(0)
+                _gateState.value = _gateState.value.copy(
+                    secondsRemaining = gateCountdownRemaining,
+                )
+                if (gateCountdownRemaining <= 0) {
+                    gateCountdownToken = null
+                    updateDebug {
+                        it.copy(
+                            gate = "Gate: countdown finished",
+                            lastError = "ad not ready within ${AD_GATE_COUNTDOWN_SECONDS}s",
+                        )
+                    }
+                    Log.w(
+                        TAG,
+                        "Ad gate countdown finished after ${AD_GATE_COUNTDOWN_SECONDS}s; continuing with action",
+                    )
+                    completePendingDownload()
+                    return
+                }
+                updateDebug { it.copy(gate = "Gate: countdown ${gateCountdownRemaining}s") }
+                mainHandler.postDelayed(this, GATE_COUNTDOWN_TICK_MS)
+            }
+        }
+        mainHandler.postDelayed(ticker, GATE_COUNTDOWN_TICK_MS)
+    }
+
+    private fun cancelGateCountdown() {
+        gateCountdownToken = null
+        gateCountdownRemaining = 0
+        if (_gateState.value.visible) {
+            _gateState.value = UnityAdGateState()
+        }
     }
 
     private fun scheduleLoadTimeout(loadGeneration: Int) {
@@ -952,7 +1036,7 @@ object UnityAdManager {
 
     fun onGateRequested() {
         updateDebug { it.copy(gate = "Gate: requested") }
-        Log.i(TAG, "Ad gate requested by download")
+        Log.i(TAG, "Ad gate requested by an app action")
     }
 
     fun onBannerLoading() {

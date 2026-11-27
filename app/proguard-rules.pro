@@ -22,8 +22,13 @@
 # App classes accessed through reflection (Room/KSP generated code, JSON models).
 -keep class com.example.** { *; }
 
-# Shizuku loads FileBridgeUserService by name in a separate process.
+# Shizuku loads FileBridgeUserService by name in a separate process. Keep both the
+# no-arg and Context constructors because Shizuku selects one reflectively.
 -keep class com.example.shizuku.FileBridgeUserService { *; }
+-keepclassmembers class com.example.shizuku.FileBridgeUserService {
+    public <init>();
+    public <init>(android.content.Context);
+}
 -keep interface com.example.shizuku.IFileBridgeService { *; }
 -keep class com.example.shizuku.IFileBridgeService$Stub { *; }
 -keep class com.example.shizuku.IFileBridgeService$Stub$Proxy { *; }

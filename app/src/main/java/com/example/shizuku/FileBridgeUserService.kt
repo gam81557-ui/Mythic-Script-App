@@ -1,5 +1,6 @@
 package com.example.shizuku
 
+import android.content.Context
 import android.os.ParcelFileDescriptor
 import android.os.Process
 import androidx.annotation.Keep
@@ -11,9 +12,19 @@ import kotlin.system.exitProcess
  * Privileged Shizuku UserService running in the Shell process (UID 2000) or Root (UID 0).
  * All file I/O targeting scoped directories under /storage/emulated/0/Android/data/
  * is executed through this AIDL binder rather than from the untrusted app process.
+ *
+ * Shizuku first looks for a Context constructor and falls back to the no-arg constructor.
+ * Both are kept explicitly because the class is loaded by reflection in another process.
  */
 @Keep
-class FileBridgeUserService : IFileBridgeService.Stub() {
+class FileBridgeUserService : IFileBridgeService.Stub {
+
+    @Suppress("unused")
+    constructor() : super()
+
+    @Suppress("unused")
+    @Keep
+    constructor(@Suppress("UNUSED_PARAMETER") context: Context) : super()
 
     override fun destroy() {
         exitProcess(0)

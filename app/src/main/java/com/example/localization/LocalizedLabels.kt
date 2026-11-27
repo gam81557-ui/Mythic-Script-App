@@ -64,6 +64,7 @@ fun ShizukuConnectionState.localizedShortLabel(context: Context): String = when 
     ShizukuConnectionState.NotRunning -> context.getString(R.string.shizuku_not_running)
     is ShizukuConnectionState.PermissionDenied -> context.getString(R.string.shizuku_permission_denied)
     ShizukuConnectionState.PermissionGranted -> context.getString(R.string.shizuku_permission_granted)
+    ShizukuConnectionState.Binding -> context.getString(R.string.shizuku_binding)
     is ShizukuConnectionState.ServiceConnected ->
         context.getString(R.string.shizuku_connected, processLabel)
     is ShizukuConnectionState.ServiceDisconnected ->
@@ -76,6 +77,7 @@ fun ShizukuConnectionState.localizedShortLabel(): String = when (this) {
     ShizukuConnectionState.NotRunning -> stringResource(R.string.shizuku_not_running)
     is ShizukuConnectionState.PermissionDenied -> stringResource(R.string.shizuku_permission_denied)
     ShizukuConnectionState.PermissionGranted -> stringResource(R.string.shizuku_permission_granted)
+    ShizukuConnectionState.Binding -> stringResource(R.string.shizuku_binding)
     is ShizukuConnectionState.ServiceConnected ->
         stringResource(R.string.shizuku_connected, processLabel)
     is ShizukuConnectionState.ServiceDisconnected ->
