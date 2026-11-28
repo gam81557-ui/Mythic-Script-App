@@ -206,6 +206,7 @@
     <string name="msg_downloaded_injected">‘%1$s’ ကို ဒေါင်းလုဒ်လုပ်ပြီး ထည့်သွင်းပြီးပါပြီ၊ အရန်လည်း သိမ်းထားသည်။</string>
     <string name="msg_injected">‘%1$s’ ကို ထည့်သွင်းပြီးပါပြီ၊ အရန်လည်း သိမ်းထားသည်။</string>
     <string name="msg_injection_failed">ထည့်သွင်းမှု မအောင်မြင်ပါ။</string>
+    <string name="msg_injection_in_progress">ထည့်သွင်းမှု လုပ်ဆောင်နေဆဲဖြစ်သည်။ ပြီးဆုံးသည်အထိ ခဏစောင့်ပါ။</string>
     <string name="msg_restore_requires_shizuku">/Android/data/ အောက်ရှိဖိုင်များ ပြန်ထားရန် Shizuku UserService လိုအပ်သည်။</string>
     <string name="msg_restored">%1$s အတွက် မူရင်းဖိုင်များ ပြန်ထားပြီးပါပြီ။</string>
     <string name="msg_restore_failed">မူရင်းပြန်ထားမှု မအောင်မြင်ပါ။</string>

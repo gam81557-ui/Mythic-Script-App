@@ -2,9 +2,9 @@ package com.example.shizuku
 
 import android.os.Binder
 import android.os.IBinder
-import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import moe.shizuku.server.IRemoteProcess
+import moe.shizuku.server.IShizukuService
 import rikka.shizuku.Shizuku
 import java.io.File
 import java.io.IOException
@@ -153,24 +153,9 @@ internal class ShellFileBridgeService : IFileBridgeService {
     private fun startProcess(command: Array<String>): IRemoteProcess {
         val binder = Shizuku.getBinder()
             ?: throw IllegalStateException("Shizuku service is not available")
-        val data = Parcel.obtain()
-        val reply = Parcel.obtain()
-        try {
-            data.writeInterfaceToken(SHIZUKU_SERVICE_DESCRIPTOR)
-            data.writeStringArray(command)
-            data.writeStringArray(null as Array<String>?)
-            data.writeString(null)
-            if (!binder.transact(TRANSACTION_NEW_PROCESS, data, reply, 0)) {
-                throw IllegalStateException("Shizuku rejected the process request")
-            }
-            reply.readException()
-            val processBinder = reply.readStrongBinder()
-                ?: throw IllegalStateException("Shizuku returned no process binder")
-            return IRemoteProcess.Stub.asInterface(processBinder)
-        } finally {
-            reply.recycle()
-            data.recycle()
-        }
+        val service = IShizukuService.Stub.asInterface(binder)
+        return service.newProcess(command, null, null)
+            ?: throw IllegalStateException("Shizuku returned no process binder")
     }
 
     private fun readFully(descriptor: ParcelFileDescriptor): String =
@@ -199,8 +184,6 @@ internal class ShellFileBridgeService : IFileBridgeService {
     private fun quote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
 
     companion object {
-        private const val SHIZUKU_SERVICE_DESCRIPTOR = "moe.shizuku.server.IShizukuService"
-        private const val TRANSACTION_NEW_PROCESS = 7
         private const val COPY_BUFFER_SIZE = 64 * 1024
     }
 }

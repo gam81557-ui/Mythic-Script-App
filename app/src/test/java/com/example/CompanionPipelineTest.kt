@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.example.data.catalog.HeroCatalogProvider
+import com.example.data.files.InjectionPipelineManager
 import com.example.data.files.ScriptArchiveManager
 import com.example.data.local.AppPreferences
 import com.example.domain.model.HeroRole
@@ -420,5 +421,18 @@ class CompanionPipelineTest {
             "Expected Hayabusa official portrait Hero211 but got $hayabusaPortrait",
             hayabusaPortrait.contains("Hero211-portrait"),
         )
+    }
+
+    @Test
+    fun `large skin is split into bounded injection batches`() {
+        val paths = InjectionPipelineManager.parseRelativePaths(
+            (1..53).joinToString("\n") { "files/asset_$it.bin" },
+        )
+
+        assertEquals(53, paths.size)
+        val batches = paths.chunked(InjectionPipelineManager.DEFAULT_BATCH_SIZE)
+        assertEquals(7, batches.size)
+        assertTrue(batches.all { it.size in 1..InjectionPipelineManager.DEFAULT_BATCH_SIZE })
+        assertTrue(batches.last().size < InjectionPipelineManager.DEFAULT_BATCH_SIZE)
     }
 }

@@ -171,6 +171,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     var adGate: ((onProceed: () -> Unit) -> Boolean)? = null
 
     private var adGateInFlight = false
+    private var injectionInProgress = false
 
     private val roleFilterFlow = MutableStateFlow(HeroRole.ALL)
     private val searchQueryFlow = MutableStateFlow("")
@@ -698,7 +699,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                     return@onSuccess
                 }
 
-                performInjectionForScript(script = script, fromAutoDownload = true)
+                startInjection(script = script, fromAutoDownload = true)
             }.onFailure { err ->
                 if (err is RemoteSkinUnavailableException) {
                     transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
@@ -733,6 +734,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         super.onCleared()
         adGate = null
         adGateInFlight = false
+        injectionInProgress = false
         shizukuBridge.unregisterListeners()
     }
 
@@ -899,6 +901,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun injectScript(script: SkinScriptItem) {
         selectScript(script.scriptId)
+        if (injectionInProgress) {
+            snackbarMessageFlow.value = tr(R.string.msg_injection_in_progress)
+            return
+        }
         if (script.lifecycleState.isBusy) return
         if (script.isUnavailable) {
             snackbarMessageFlow.value = tr(
@@ -925,12 +931,25 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
 
         maybeGateAction(
             onProceed = {
-                launchSafely(R.string.msg_injection_failed) {
-                    performInjectionForScript(script = script, fromAutoDownload = false)
-                }
+                startInjection(script = script, fromAutoDownload = false)
             },
             label = "Inject",
         )
+    }
+
+    private fun startInjection(script: SkinScriptItem, fromAutoDownload: Boolean) {
+        if (injectionInProgress) {
+            snackbarMessageFlow.value = tr(R.string.msg_injection_in_progress)
+            return
+        }
+        injectionInProgress = true
+        launchSafely(R.string.msg_injection_failed) {
+            try {
+                performInjectionForScript(script = script, fromAutoDownload = fromAutoDownload)
+            } finally {
+                injectionInProgress = false
+            }
+        }
     }
 
     private suspend fun performInjectionForScript(
@@ -939,6 +958,9 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     ) {
         runCatching {
             val targetPkg = uiState.value.targetPackage
+            val initialProgress = ScriptLifecycleState.Injecting(0f, script.skinName)
+            transientScriptStatesFlow.value =
+                transientScriptStatesFlow.value + (script.scriptId to initialProgress)
             repository.ensureRemoteScriptPersisted(script)
             val result = repository.injectScript(
                 scriptId = script.scriptId,
@@ -957,11 +979,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }.onFailure { err ->
                 if (err is ShizukuRequiredException) {
-                    snackbarMessageFlow.value = if (fromAutoDownload) {
-                        tr(R.string.msg_downloaded_shizuku_required, script.skinName)
-                    } else {
-                        tr(R.string.msg_shizuku_required_before_inject)
-                    }
+                    snackbarMessageFlow.value = err.message?.takeIf { it.isNotBlank() }
+                        ?: if (fromAutoDownload) {
+                            tr(R.string.msg_downloaded_shizuku_required, script.skinName)
+                        } else {
+                            tr(R.string.msg_shizuku_required_before_inject)
+                        }
                     showDiagnosticsSheetFlow.value = true
                 } else {
                     snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
@@ -970,7 +993,8 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         }.onFailure { err ->
             transientScriptStatesFlow.value = transientScriptStatesFlow.value - script.scriptId
             if (err is ShizukuRequiredException) {
-                snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_inject)
+                snackbarMessageFlow.value = err.message?.takeIf { it.isNotBlank() }
+                    ?: tr(R.string.msg_shizuku_required_before_inject)
                 showDiagnosticsSheetFlow.value = true
             } else {
                 snackbarMessageFlow.value = errorMessage(err, R.string.msg_injection_failed)
@@ -999,7 +1023,8 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                         snackbarMessageFlow.value = tr(R.string.msg_restored, uiState.value.selectedHero.name)
                     }.onFailure { err ->
                         if (err is ShizukuRequiredException) {
-                            snackbarMessageFlow.value = tr(R.string.msg_shizuku_required_before_restore)
+                            snackbarMessageFlow.value = err.message?.takeIf { it.isNotBlank() }
+                                ?: tr(R.string.msg_shizuku_required_before_restore)
                             showDiagnosticsSheetFlow.value = true
                         } else {
                             snackbarMessageFlow.value = errorMessage(err, R.string.msg_restore_failed)

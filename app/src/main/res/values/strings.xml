@@ -212,6 +212,7 @@
     <string name="msg_downloaded_injected">Downloaded &amp; injected ‘%1$s’ with backup saved.</string>
     <string name="msg_injected">Injected ‘%1$s’ with backup saved.</string>
     <string name="msg_injection_failed">Injection failed.</string>
+    <string name="msg_injection_in_progress">Injection is already running. Please wait for it to finish.</string>
     <string name="msg_restore_requires_shizuku">Shizuku UserService required to restore files under /Android/data/.</string>
     <string name="msg_restored">Restored original files for %1$s.</string>
     <string name="msg_restore_failed">Restore failed.</string>
